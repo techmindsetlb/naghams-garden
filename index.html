@@ -39,7 +39,8 @@
     <div class="sidebar-boards" id="sidebarBoards">
       <div class="sidebar-label">
         Boards
-        <button class="sidebar-settings-btn" onclick="openSettings()" title="Customize Theme"><i class="fa-solid fa-palette"></i></button>
+        <button class="sidebar-settings-btn" onclick="openSettings()" title="Customize"><i class="fa-solid fa-palette"></i></button>
+      <button class="sidebar-settings-btn" onclick="lockApp()" title="Lock App"><i class="fa-solid fa-lock"></i></button>
       </div>
       <div class="boards-list" id="boardList"></div>
       <button class="add-board-btn" onclick="addBoard()">
@@ -52,6 +53,38 @@
   <!-- MAIN -->
   <div class="main" id="mainContent">
     <!-- Rendered by JS -->
+  </div>
+</div>
+
+<!-- LOCK SCREEN -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-container">
+    <div class="lock-emoji">🔒</div>
+    <div class="lock-title">Nagham's Garden</div>
+    <div class="lock-sub">Enter PIN to unlock</div>
+    <div class="lock-pin-wrap">
+      <div class="lock-dots" id="lockDots">
+        <span class="lock-dot"></span>
+        <span class="lock-dot"></span>
+        <span class="lock-dot"></span>
+        <span class="lock-dot"></span>
+      </div>
+      <div class="lock-error" id="lockError">Incorrect PIN</div>
+    </div>
+    <div class="lock-keypad" id="lockKeypad">
+      <button class="lock-key" onclick="pinKey('1')">1</button>
+      <button class="lock-key" onclick="pinKey('2')">2</button>
+      <button class="lock-key" onclick="pinKey('3')">3</button>
+      <button class="lock-key" onclick="pinKey('4')">4</button>
+      <button class="lock-key" onclick="pinKey('5')">5</button>
+      <button class="lock-key" onclick="pinKey('6')">6</button>
+      <button class="lock-key" onclick="pinKey('7')">7</button>
+      <button class="lock-key" onclick="pinKey('8')">8</button>
+      <button class="lock-key" onclick="pinKey('9')">9</button>
+      <button class="lock-key" onclick="pinClear()">⌫</button>
+      <button class="lock-key" onclick="pinKey('0')">0</button>
+      <button class="lock-key" onclick="pinSubmit()">✓</button>
+    </div>
   </div>
 </div>
 

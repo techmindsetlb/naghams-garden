@@ -1830,9 +1830,78 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
 });
 
+// ===== PIN LOCK =====
+const PIN_CODE = '2002';
+let pinEntry = '';
+
+function checkAppLock() {
+  const unlocked = sessionStorage.getItem('nagham-unlocked');
+  if (unlocked === 'true') {
+    document.getElementById('lockScreen').classList.add('hidden');
+    initApp();
+  } else {
+    // Lock screen is visible by default
+    initApp(); // Initialize app in background
+  }
+}
+
+function pinKey(digit) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += digit;
+  updatePinDots();
+  
+  if (pinEntry.length === 4) {
+    setTimeout(pinSubmit, 200);
+  }
+}
+
+function pinClear() {
+  pinEntry = pinEntry.slice(0, -1);
+  updatePinDots();
+  document.getElementById('lockError').classList.remove('show');
+}
+
+function pinSubmit() {
+  if (pinEntry === PIN_CODE) {
+    document.getElementById('lockError').classList.remove('show');
+    sessionStorage.setItem('nagham-unlocked', 'true');
+    document.getElementById('lockScreen').classList.add('hidden');
+    pinEntry = '';
+  } else {
+    document.getElementById('lockError').classList.add('show');
+    document.querySelectorAll('.lock-dot').forEach(d => d.classList.add('wrong'));
+    setTimeout(() => {
+      document.querySelectorAll('.lock-dot').forEach(d => {
+        d.classList.remove('filled', 'wrong');
+      });
+    }, 400);
+    pinEntry = '';
+    updatePinDots();
+  }
+}
+
+function updatePinDots() {
+  const dots = document.querySelectorAll('.lock-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('filled', i < pinEntry.length);
+  });
+}
+
+// ===== LOCK APP =====
+function lockApp() {
+  sessionStorage.removeItem('nagham-unlocked');
+  pinEntry = '';
+  updatePinDots();
+  document.getElementById('lockError').classList.remove('show');
+  document.getElementById('lockScreen').classList.remove('hidden');
+}
+
 // ===== INIT =====
-applyTheme(settings.theme);
-renderSidebar();
-// Default to tasks view
-switchView('tasks');
-toast('🌻 Welcome, Nagham!', 'ok');
+function initApp() {
+  applyTheme(settings.theme);
+  renderSidebar();
+  switchView('tasks');
+  toast('🌻 Welcome, Nagham!', 'ok');
+}
+
+document.addEventListener('DOMContentLoaded', checkAppLock);
