@@ -46,6 +46,218 @@ const COLOR_HEX = { pink:'#FF6B9D', yellow:'#FFD93D', green:'#66BB6A', purple:'#
 const STORAGE_KEY = 'nagham-garden';
 const SETTINGS_KEY = 'nagham-settings';
 const SESSIONS_KEY = 'nagham-sessions';
+const FILE_DB_NAME = 'nagham-files';
+const FILE_DB_VERSION = 1;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const IMG_MAX_DIM = 1920; // max image dimension for compression
+
+// ===== INDEXEDDB FILE STORAGE =====
+let fileDb = null;
+
+function openFileDB() {
+  return new Promise((resolve, reject) => {
+    if (fileDb) { resolve(fileDb); return; }
+    const req = indexedDB.open(FILE_DB_NAME, FILE_DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('files')) {
+        const store = db.createObjectStore('files', { keyPath: 'id' });
+        store.createIndex('cardId', 'cardId', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => { fileDb = e.target.result; resolve(fileDb); };
+    req.onerror = (e) => { reject(e.target.error); };
+  });
+}
+
+function saveFileToDB(file) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openFileDB();
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const req = store.put(file);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = (e) => reject(e.target.error);
+    } catch(e) { reject(e); }
+  });
+}
+
+function deleteFileFromDB(fileId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openFileDB();
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const req = store.delete(fileId);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e.target.error);
+    } catch(e) { reject(e); }
+  });
+}
+
+function deleteFilesByCardId(cardId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openFileDB();
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const index = store.index('cardId');
+      const req = index.openCursor(IDBKeyRange.only(cardId));
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          store.delete(cursor.primaryKey);
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      };
+      req.onerror = (e) => reject(e.target.error);
+    } catch(e) { reject(e); }
+  });
+}
+
+function getFilesByCardId(cardId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openFileDB();
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const index = store.index('cardId');
+      const req = index.getAll(IDBKeyRange.only(cardId));
+      req.onsuccess = (e) => resolve(e.target.result || []);
+      req.onerror = (e) => reject(e.target.error);
+    } catch(e) { reject(e); }
+  });
+}
+
+function getFileById(fileId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const db = await openFileDB();
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const req = store.get(fileId);
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = (e) => reject(e.target.error);
+    } catch(e) { reject(e); }
+  });
+}
+
+// ===== IMAGE COMPRESSION =====
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        // Resize if larger than max dimension
+        if (w > IMG_MAX_DIM || h > IMG_MAX_DIM) {
+          const ratio = Math.min(IMG_MAX_DIM / w, IMG_MAX_DIM / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, w, h);
+        
+        // Preserve PNG format for transparency, use JPEG for other formats
+        const isPng = file.type === 'image/png';
+        const outType = isPng ? 'image/png' : 'image/jpeg';
+        const quality = isPng ? undefined : 0.82;
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressed = new File([blob], file.name, {
+              type: outType,
+              lastModified: Date.now()
+            });
+            resolve(compressed);
+          } else {
+            resolve(file);
+          }
+        }, outType, quality);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+// ===== FILE UPLOAD HANDLER =====
+async function handleFileSelect(inputId, previewId) {
+  const input = document.getElementById(inputId);
+  if (!input || !input.files.length) return;
+  
+  const preview = document.getElementById(previewId);
+  if (!preview) return;
+  
+  for (const file of input.files) {
+    if (file.size > MAX_FILE_SIZE) {
+      toast(`"${file.name}" exceeds 50MB limit!`, 'err');
+      continue;
+    }
+    
+    // Compress if image
+    const processed = await compressImage(file);
+    const finalSize = processed.size;
+    
+    // Read as data URL for preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const sizeLabel = finalSize > 1024 * 1024 ?
+        (finalSize / 1024 / 1024).toFixed(1) + ' MB' :
+        (finalSize / 1024).toFixed(0) + ' KB';
+      
+      preview.innerHTML += `
+        <div class="file-preview-item" data-name="${esc(file.name)}" data-size="${finalSize}" data-type="${file.type}" data-dataurl="${dataUrl}">
+          <div class="file-preview-icon">
+            ${file.type.startsWith('image/') ? `<img src="${dataUrl}" class="file-preview-thumb">` : '📎'}
+          </div>
+          <div class="file-preview-info">
+            <div class="file-preview-name">${esc(file.name)}</div>
+            <div class="file-preview-size">${esc(sizeLabel)}</div>
+          </div>
+          <button class="file-preview-remove" onclick="this.parentElement.remove()" title="Remove">✕</button>
+        </div>
+      `;
+    };
+    reader.readAsDataURL(processed);
+  }
+  
+  // Reset input so same file can be re-selected
+  input.value = '';
+}
+
+function getPendingFiles(previewId) {
+  const container = document.getElementById(previewId);
+  if (!container) return [];
+  const items = container.querySelectorAll('.file-preview-item:not([data-file-id])');
+  return Array.from(items).map(el => ({
+    name: el.dataset.name,
+    size: parseInt(el.dataset.size),
+    type: el.dataset.type,
+    dataUrl: el.dataset.dataurl
+  }));
+}
+
+function formatFileSize(bytes) {
+  if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return bytes + ' B';
+}
 
 // ===== THEMES =====
 const THEMES = {
@@ -296,6 +508,7 @@ function clearSearch() {
 function cardHTML(c, boardId, idx) {
   const tags = c.tags?.length ? c.tags.map(t => `<span class="card-tag ${t}">${TAG_LABELS[t]||t}</span>`).join('') : '';
   const prio = c.prio === 'high' ? '🔴 High' : c.prio === 'medium' ? '🟡 Med' : '';
+  const fileCount = c.fileCount || 0;
 
   let dueHTML = '';
   if (c.due) {
@@ -328,6 +541,7 @@ function cardHTML(c, boardId, idx) {
           ${tags}
           ${prio ? `<span class="card-priority">${prio}</span>` : ''}
           ${dueHTML}
+          ${fileCount > 0 ? `<span class="card-file-badge" onclick="event.stopPropagation();viewCardFiles('${boardId}','${c.id}')"><i class="fa-solid fa-paperclip"></i> ${fileCount}</span>` : ''}
         </div>
       </div>
       <div class="card-actions">
@@ -454,6 +668,15 @@ function addCard() {
         <label class="form-l"><i class="fa-regular fa-calendar"></i> Due Date <span style="color:var(--plum-muted);font-weight:400">(optional)</span></label>
         <input class="form-i" type="date" id="inpDate">
       </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-solid fa-paperclip"></i> Attachments <span style="color:var(--plum-muted);font-weight:400">(max 50MB each)</span></label>
+        <div class="file-upload-zone" onclick="document.getElementById('inpFiles').click()" ondragover="this.classList.add('drag-over');event.preventDefault()" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('inpFiles').files=event.dataTransfer.files;handleFileSelect('inpFiles','inpFilePreview')">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Click or drag files here</span>
+        </div>
+        <input type="file" id="inpFiles" multiple style="display:none" onchange="handleFileSelect('inpFiles','inpFilePreview')" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp4,.mp3">
+        <div id="inpFilePreview"></div>
+      </div>
     </div>
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -463,7 +686,7 @@ function addCard() {
   setTimeout(() => document.getElementById('inpTitle')?.focus(), 100);
 }
 
-function saveNewCard() {
+async function saveNewCard() {
   const title = document.getElementById('inpTitle').value.trim();
   if (!title) { toast('Please enter a title!', 'err'); return; }
   const board = state.boards.find(b => b.id === activeBoardId);
@@ -472,7 +695,28 @@ function saveNewCard() {
   const tags = [...document.querySelectorAll('.form-tag.sel')].map(el => el.dataset.t);
   const prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   const due = document.getElementById('inpDate').value || null;
-  board.cards.unshift({ id: uid(), title, desc, prio, tags, done: false, due });
+  
+  const cardId = uid();
+  const pendingFiles = getPendingFiles('inpFilePreview');
+  board.cards.unshift({ id: cardId, title, desc, prio, tags, done: false, due, fileCount: pendingFiles.length });
+  
+  // Save pending files to IndexedDB
+  for (const f of pendingFiles) {
+    const fileRecord = {
+      id: uid(),
+      cardId: cardId,
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      dataUrl: f.dataUrl
+    };
+    try {
+      await saveFileToDB(fileRecord);
+    } catch(e) {
+      console.error('Failed to save file:', e);
+    }
+  }
+  
   save();
   closeModal();
   renderMain();
@@ -480,7 +724,7 @@ function saveNewCard() {
 }
 
 // ===== EDIT CARD =====
-function editCard(boardId, cardId) {
+async function editCard(boardId, cardId) {
   const board = state.boards.find(b => b.id === boardId);
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
@@ -489,6 +733,24 @@ function editCard(boardId, cardId) {
   const tagsHTML = Object.entries(TAG_LABELS).map(([k,v]) =>
     `<button class="form-tag${card.tags?.includes(k)?' sel':''}" data-t="${k}" onclick="togTag(this)">${v}</button>`
   ).join('');
+  
+  // Load existing files for this card
+  const existingFiles = await getFilesByCardId(cardId);
+  let existingFilesHTML = '';
+  if (existingFiles.length > 0) {
+    existingFilesHTML = existingFiles.map(f => `
+      <div class="file-preview-item" data-file-id="${f.id}" data-name="${esc(f.name)}">
+        <div class="file-preview-icon">
+          ${f.type.startsWith('image/') ? `<img src="${f.dataUrl}" class="file-preview-thumb">` : '📎'}
+        </div>
+        <div class="file-preview-info">
+          <div class="file-preview-name">${esc(f.name)}</div>
+          <div class="file-preview-size">${formatFileSize(f.size)}</div>
+        </div>
+        <button class="file-preview-remove" onclick="removeExistingFile('${boardId}','${cardId}','${f.id}')" title="Remove">✕</button>
+      </div>
+    `).join('');
+  }
 
   showModal(`
     <div class="modal-h">
@@ -520,6 +782,15 @@ function editCard(boardId, cardId) {
         <label class="form-l"><i class="fa-regular fa-calendar"></i> Due Date <span style="color:var(--plum-muted);font-weight:400">(optional)</span></label>
         <input class="form-i" type="date" id="editDue" value="${card.due||''}">
       </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-solid fa-paperclip"></i> Attachments <span style="color:var(--plum-muted);font-weight:400">(max 50MB each)</span></label>
+        <div class="file-upload-zone" onclick="document.getElementById('editFiles').click()" ondragover="this.classList.add('drag-over');event.preventDefault()" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('editFiles').files=event.dataTransfer.files;handleFileSelect('editFiles','editFilePreview')">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Click or drag files here</span>
+        </div>
+        <input type="file" id="editFiles" multiple style="display:none" onchange="handleFileSelect('editFiles','editFilePreview')" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.mp4,.mp3">
+        <div id="editFilePreview">${existingFilesHTML}</div>
+      </div>
     </div>
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -528,7 +799,70 @@ function editCard(boardId, cardId) {
   `);
 }
 
-function saveEdit(boardId, cardId) {
+async function viewCardFiles(boardId, cardId) {
+  const files = await getFilesByCardId(cardId);
+  if (!files.length) return;
+  
+  showModal(`
+    <div class="modal-h">
+      <div class="modal-h-title">📎 Attachments</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-b">
+      ${files.map(f => `
+        <div class="file-viewer-item">
+          <div class="file-viewer-icon">
+            ${f.type.startsWith('image/') ? `<img src="${f.dataUrl}" class="file-viewer-thumb" onclick="openFileViewer('${f.id}')">` : '📎'}
+          </div>
+          <div class="file-viewer-info">
+            <div class="file-viewer-name">${esc(f.name)}</div>
+            <div class="file-viewer-size">${formatFileSize(f.size)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="downloadFile('${f.id}')">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  `);
+}
+
+async function downloadFile(fileId) {
+  const file = await getFileById(fileId);
+  if (!file) return;
+  const a = document.createElement('a');
+  a.href = file.dataUrl;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function openFileViewer(fileId) {
+  const file = await getFileById(fileId);
+  if (!file || !file.type.startsWith('image/')) return;
+  showModal(`
+    <div class="modal-h">
+      <div class="modal-h-title">🖼️ ${esc(file.name)}</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-b" style="text-align:center">
+      <img src="${file.dataUrl}" style="max-width:100%;max-height:60vh;border-radius:var(--radius-sm);box-shadow:var(--shadow-md)">
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-pink" onclick="downloadFile('${fileId}');closeModal()"><i class="fa-solid fa-download"></i> Download</button>
+    </div>
+  `);
+}
+
+function removeExistingFile(boardId, cardId, fileId) {
+  deleteFileFromDB(fileId);
+  const el = document.querySelector(`.file-preview-item[data-file-id="${fileId}"]`);
+  if (el) el.remove();
+}
+
+async function saveEdit(boardId, cardId) {
   const board = state.boards.find(b => b.id === boardId);
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
@@ -540,6 +874,30 @@ function saveEdit(boardId, cardId) {
   card.tags = [...document.querySelectorAll('#editModal .form-tag.sel')].map(el => el.dataset.t);
   card.prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   card.due = document.getElementById('editDue').value || null;
+  
+  // Save new pending files to IndexedDB
+  const pendingFiles = getPendingFiles('editFilePreview');
+  for (const f of pendingFiles) {
+    const fileRecord = {
+      id: uid(),
+      cardId: cardId,
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      dataUrl: f.dataUrl
+    };
+    try {
+      await saveFileToDB(fileRecord);
+    } catch(e) {
+      console.error('Failed to save file:', e);
+    }
+  }
+  
+  // Update file count
+  const existingFiles = await getFilesByCardId(cardId);
+  const newCount = existingFiles.length + pendingFiles.length;
+  card.fileCount = newCount;
+  
   save();
   closeModal();
   renderMain();
@@ -552,7 +910,11 @@ function delCard(boardId, cardId) {
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
   if (!card) return;
-  confirm('🗑️', 'Delete this task?', `"${esc(card.title)}" will be removed forever.`, () => {
+  confirm('🗑️', 'Delete this task?', `"${esc(card.title)}" will be removed forever.`, async () => {
+    // Delete associated files from IndexedDB
+    try {
+      await deleteFilesByCardId(cardId);
+    } catch(e) {}
     board.cards = board.cards.filter(c => c.id !== cardId);
     save();
     closeModal();
