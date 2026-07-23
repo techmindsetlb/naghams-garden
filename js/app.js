@@ -1282,11 +1282,14 @@ function removeClItem(el) {
 function collectChecklist(listId) {
   const list = document.getElementById(listId);
   if (!list) return [];
-  return Array.from(list.querySelectorAll('.cl-item')).map(el => ({
-    id: el.dataset.clId,
-    text: el.querySelector('.cl-text').textContent,
-    done: el.querySelector('.cl-check').classList.contains('done')
-  }));
+  return Array.from(list.querySelectorAll('.cl-item')).map(el => {
+    const textEl = el.querySelector('.cl-text') || el.querySelector('.cl-edit-input');
+    return {
+      id: el.dataset.clId,
+      text: textEl ? (textEl.value || textEl.textContent || '').trim() : '',
+      done: el.querySelector('.cl-check').classList.contains('done')
+    };
+  });
 }
 
 function renderChecklistItems(items, listId) {
