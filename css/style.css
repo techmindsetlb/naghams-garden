@@ -1370,9 +1370,9 @@ html, body {
 }
 
 .calendar-weekday {
-  padding: 6px 0;
+  padding: 8px 0;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--plum-muted);
   text-transform: uppercase;
@@ -1385,7 +1385,7 @@ html, body {
 }
 
 .calendar-day {
-  padding: 2px 3px;
+  padding: 4px 6px;
   border-right: 1px solid rgba(45,27,46,0.04);
   border-bottom: 1px solid rgba(45,27,46,0.04);
   cursor: pointer;
@@ -1394,7 +1394,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 34px;
+  min-height: 58px;
   justify-content: center;
 }
 
@@ -1415,12 +1415,12 @@ html, body {
   background: var(--pink);
   color: white;
   border-radius: 50%;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .calendar-day.selected {
@@ -1429,7 +1429,7 @@ html, body {
 }
 
 .day-number {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--plum);
 }
@@ -1437,15 +1437,15 @@ html, body {
 .calendar-day-tasks {
   display: flex;
   flex-wrap: wrap;
-  gap: 1px;
+  gap: 2px;
   justify-content: center;
-  margin-top: 1px;
+  margin-top: 2px;
   max-width: 100%;
 }
 
 .calendar-day-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -1459,7 +1459,7 @@ html, body {
 .calendar-task-list {
   flex: 1;
   overflow-y: auto;
-  margin-top: 6px;
+  margin-top: 10px;
   min-height: 0;
 }
 
@@ -1768,10 +1768,11 @@ html, body {
   .cards-grid { max-width: 100%; }
   
   .calendar-view { padding: 10px 12px; }
-  .calendar-day { min-height: 30px; padding: 2px; }
+  .calendar-day { min-height: 46px; padding: 4px; }
   .calendar-title { font-size: 15px; }
-  .calendar-day.today .day-number { width: 20px; height: 20px; font-size: 10px; }
-  .calendar-weekday { font-size: 9px; padding: 4px 0; }
+  .day-number { font-size: 12px; }
+  .calendar-day.today .day-number { width: 24px; height: 24px; font-size: 12px; }
+  .calendar-weekday { font-size: 10px; padding: 6px 0; }
   
   .focus-canvas-wrap { width: 240px; height: 240px; }
   .focus-time { font-size: 36px; }
@@ -1785,9 +1786,9 @@ html, body {
   :root { --sidebar-w: 48px; }
   .board-item-icon { width: 24px; height: 24px; font-size: 12px; }
   .main-board-stats { display: none; }
-  .calendar-day { min-height: 26px; padding: 2px; }
-  .day-number { font-size: 10px; }
-  .calendar-day.today .day-number { width: 18px; height: 18px; font-size: 9px; }
+  .calendar-day { min-height: 40px; padding: 4px; }
+  .day-number { font-size: 12px; }
+  .calendar-day.today .day-number { width: 24px; height: 24px; font-size: 11px; }
   .focus-canvas-wrap { width: 200px; height: 200px; }
   .focus-time { font-size: 28px; }
 }
