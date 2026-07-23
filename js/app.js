@@ -187,8 +187,8 @@ function renderMain() {
     </div>
     <div class="cards-area">
       <div class="search-bar">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input class="search-input" id="searchInput" placeholder="Search tasks..." value="${esc(searchQuery)}" oninput="doSearch(this.value)">
+        <i class="fa-solid fa-magnifying-glass" onclick="submitSearch()" style="cursor:pointer"></i>
+        <input class="search-input" id="searchInput" placeholder="Search tasks... (press Enter)" value="${esc(searchQuery)}" onkeydown="if(event.key==='Enter')submitSearch()">
         ${q ? '<button class="search-clear" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></button>' : ''}
       </div>
       <div class="cards-grid" id="cardsGrid">
@@ -207,7 +207,8 @@ function renderMain() {
   if (!q) bindDragDrop();
 }
 
-function doSearch(val) {
+function submitSearch() {
+  const val = document.getElementById('searchInput')?.value || '';
   searchQuery = val;
   renderMain();
 }
