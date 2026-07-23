@@ -18,15 +18,35 @@
     <div class="sidebar-header" id="sidebarHeader">
       <!-- Rendered by JS -->
     </div>
-    <div class="sidebar-label">
-      Boards
-      <button class="sidebar-settings-btn" onclick="openSettings()" title="Customize Theme"><i class="fa-solid fa-palette"></i></button>
+
+    <!-- NAVIGATION -->
+    <div class="sidebar-nav">
+      <button class="sidebar-nav-item active" data-view="tasks" onclick="switchView('tasks')">
+        <i class="fa-solid fa-list-check"></i>
+        <span>Tasks</span>
+      </button>
+      <button class="sidebar-nav-item" data-view="calendar" onclick="switchView('calendar')">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span>Calendar</span>
+      </button>
+      <button class="sidebar-nav-item" data-view="focus" onclick="switchView('focus')">
+        <i class="fa-solid fa-seedling"></i>
+        <span>Focus</span>
+      </button>
     </div>
-    <div class="boards-list" id="boardList"></div>
-    <button class="add-board-btn" onclick="addBoard()">
-      <i class="fa-solid fa-plus"></i>
-      <span>New Board</span>
-    </button>
+
+    <!-- BOARD SECTION (only shown in tasks view) -->
+    <div class="sidebar-boards" id="sidebarBoards">
+      <div class="sidebar-label">
+        Boards
+        <button class="sidebar-settings-btn" onclick="openSettings()" title="Customize Theme"><i class="fa-solid fa-palette"></i></button>
+      </div>
+      <div class="boards-list" id="boardList"></div>
+      <button class="add-board-btn" onclick="addBoard()">
+        <i class="fa-solid fa-plus"></i>
+        <span>New Board</span>
+      </button>
+    </div>
   </div>
 
   <!-- MAIN -->

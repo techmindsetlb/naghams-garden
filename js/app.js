@@ -1,6 +1,6 @@
 /* =============================================================
-   NAGHAM'S PRODUCTIVITY GARDEN - Clean App
-   Trello-style Task Manager with Local Storage
+   NAGHAM'S PRODUCTIVITY GARDEN - Complete App
+   Features: Trello boards, Calendar, Sunflower Focus Timer
    ============================================================= */
 
 // ===== DATA =====
@@ -45,6 +45,7 @@ const COLOR_HEX = { pink:'#FF6B9D', yellow:'#FFD93D', green:'#66BB6A', purple:'#
 
 const STORAGE_KEY = 'nagham-garden';
 const SETTINGS_KEY = 'nagham-settings';
+const SESSIONS_KEY = 'nagham-sessions';
 
 // ===== THEMES =====
 const THEMES = {
@@ -57,6 +58,24 @@ const THEMES = {
   boho: { name: 'Boho Earth', emoji: '🌿', icon: '🌿',
     swatches: ['#E07A5F','#D4A017','#F5F0E8','#5D4037'] }
 };
+
+// ===== MOTIVATIONAL QUOTES =====
+const MOTIVATIONS = [
+  "Grow your dreams, one task at a time ✨",
+  "You're planting seeds of success today 🌱",
+  "Small steps lead to big blooms 🌻",
+  "You're the sun in your own garden ☀️",
+  "Every moment of focus is a petal unfurling 🌸",
+  "Your dedication is beautiful — keep going 💖",
+  "Bloom where you're planted, Nagham 🌿",
+  "You're creating something magical ✨",
+  "This moment is yours — own it 🌟",
+  "Like a sunflower, you turn challenges into light 🌻",
+  "Breathe, focus, shine ✨",
+  "You've got this — one second at a time 💪",
+  "Your garden is growing beautifully 🌱",
+  "Stay rooted, keep growing 🌻"
+];
 
 // ===== SETTINGS =====
 let settings = loadSettings();
@@ -77,15 +96,38 @@ function applyTheme(themeId) {
   document.documentElement.setAttribute('data-theme', themeId);
   settings.theme = themeId;
   saveSettings();
-  // Refresh sidebar header to update icon
   renderSidebarHeader();
 }
 
 // ===== STATE =====
 let state = loadState();
 let activeBoardId = state.boards[0]?.id || null;
+let currentView = 'tasks';
 let confirmCb = null;
 let focusHandler = null;
+
+// ===== FOCUS TIMER STATE =====
+let timerState = {
+  duration: 25 * 60,       // seconds
+  remaining: 25 * 60,
+  total: 25 * 60,
+  running: false,
+  paused: false,
+  interval: null,
+  growth: 0,               // 0-100%
+  completed: false,
+  selectedDuration: 25 * 60
+};
+
+// ===== CALENDAR STATE =====
+let calendarState = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  selectedDate: null
+};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function loadState() {
   try {
@@ -96,6 +138,18 @@ function loadState() {
 }
 
 function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
+
+function loadSessions() {
+  try {
+    const s = localStorage.getItem(SESSIONS_KEY);
+    if (s) { const p = JSON.parse(s); if (Array.isArray(p)) return p; }
+  } catch(e) {}
+  return [];
+}
+
+function saveSessions(sessions) {
+  try { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)); } catch(e) {}
+}
 
 function uid() { return '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -111,6 +165,24 @@ function toast(msg, type='') {
   setTimeout(() => t.remove(), 3000);
 }
 
+// ===== NAVIGATION =====
+function switchView(view) {
+  currentView = view;
+  // Update nav buttons
+  document.querySelectorAll('.sidebar-nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  // Toggle boards section visibility
+  const boards = document.getElementById('sidebarBoards');
+  if (boards) {
+    boards.style.display = view === 'tasks' ? 'flex' : 'none';
+  }
+  // Render the appropriate view
+  if (view === 'tasks') renderMain();
+  else if (view === 'calendar') renderCalendar();
+  else if (view === 'focus') renderFocus();
+}
+
 // ===== RENDER SIDEBAR HEADER =====
 function renderSidebarHeader() {
   const h = document.getElementById('sidebarHeader');
@@ -118,7 +190,7 @@ function renderSidebarHeader() {
   let iconHtml = '';
   if (settings.logoStyle === 'emoji-name') iconHtml = theme.icon;
   else if (settings.logoStyle === 'both') iconHtml = '🌻✨';
-  
+
   h.innerHTML = `
     <div class="sidebar-title">
       ${iconHtml ? `<span>${iconHtml}</span>` : ''}
@@ -128,7 +200,7 @@ function renderSidebarHeader() {
   `;
 }
 
-// ===== RENDER SIDEBAR =====
+// ===== RENDER SIDEBAR BOARDS =====
 function renderSidebar() {
   renderSidebarHeader();
   const list = document.getElementById('boardList');
@@ -149,17 +221,18 @@ function switchBoard(id) {
   renderMain();
 }
 
-// ===== RENDER MAIN =====
+// ===== TASKS VIEW =====
 let searchQuery = '';
 
 function renderMain() {
+  if (currentView !== 'tasks') return;
+  
   const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) { document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🌻</div><div class="empty-state-text">Create a board to get started!</div></div>'; return; }
 
   const total = board.cards.length;
   const done = board.cards.filter(c => c.done).length;
 
-  // Filter cards by search query
   const q = searchQuery.toLowerCase().trim();
   let filteredCards = board.cards;
   if (q) {
@@ -203,7 +276,6 @@ function renderMain() {
     </div>
   `;
 
-  // Re-bind drag events after rendering
   if (!q) bindDragDrop();
 }
 
@@ -221,8 +293,7 @@ function clearSearch() {
 function cardHTML(c, boardId, idx) {
   const tags = c.tags?.length ? c.tags.map(t => `<span class="card-tag ${t}">${TAG_LABELS[t]||t}</span>`).join('') : '';
   const prio = c.prio === 'high' ? '🔴 High' : c.prio === 'medium' ? '🟡 Med' : '';
-  
-  // Due date display (timezone-safe string comparison)
+
   let dueHTML = '';
   if (c.due) {
     const today = new Date().toISOString().split('T')[0];
@@ -264,13 +335,13 @@ function cardHTML(c, boardId, idx) {
   `;
 }
 
-// ===== DRAG & DROP REORDERING =====
+// ===== DRAG & DROP =====
 let dragSrcId = null;
 
 function bindDragDrop() {
   const grid = document.getElementById('cardsGrid');
   if (!grid) return;
-  
+
   const cards = grid.querySelectorAll('.card[draggable]');
   cards.forEach(card => {
     card.addEventListener('dragstart', dragStart);
@@ -287,7 +358,6 @@ function dragStart(e) {
   this.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', this.dataset.id);
-  // Don't show drag ghost image - use our own styling
   const ghost = this.cloneNode(true);
   ghost.style.opacity = '0.5';
   ghost.style.position = 'absolute';
@@ -297,41 +367,28 @@ function dragStart(e) {
   setTimeout(() => ghost.remove(), 0);
 }
 
-function dragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-}
+function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
 
 function dragEnter(e) {
   e.preventDefault();
-  if (this.dataset.id !== dragSrcId) {
-    this.classList.add('drag-over');
-  }
+  if (this.dataset.id !== dragSrcId) this.classList.add('drag-over');
 }
 
-function dragLeave() {
-  this.classList.remove('drag-over');
-}
+function dragLeave() { this.classList.remove('drag-over'); }
 
 function dragDrop(e) {
   e.stopPropagation();
   this.classList.remove('drag-over');
-  
   const fromId = dragSrcId;
   const toId = this.dataset.id;
   if (!fromId || fromId === toId) return;
-  
   const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-  
   const fromIdx = board.cards.findIndex(c => c.id === fromId);
   const toIdx = board.cards.findIndex(c => c.id === toId);
   if (fromIdx === -1 || toIdx === -1) return;
-  
-  // Reorder
   const [moved] = board.cards.splice(fromIdx, 1);
   board.cards.splice(toIdx, 0, moved);
-  
   save();
   renderMain();
   toast('✨ Task reordered!', 'ok');
@@ -406,15 +463,12 @@ function addCard() {
 function saveNewCard() {
   const title = document.getElementById('inpTitle').value.trim();
   if (!title) { toast('Please enter a title!', 'err'); return; }
-
   const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-
   const desc = document.getElementById('inpDesc').value.trim();
   const tags = [...document.querySelectorAll('.form-tag.sel')].map(el => el.dataset.t);
   const prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   const due = document.getElementById('inpDate').value || null;
-
   board.cards.unshift({ id: uid(), title, desc, prio, tags, done: false, due });
   save();
   closeModal();
@@ -476,16 +530,13 @@ function saveEdit(boardId, cardId) {
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
   if (!card) return;
-
   const title = document.getElementById('editTitle').value.trim();
   if (!title) { toast('Title cannot be empty!', 'err'); return; }
-
   card.title = title;
   card.desc = document.getElementById('editDesc').value.trim();
   card.tags = [...document.querySelectorAll('#editModal .form-tag.sel')].map(el => el.dataset.t);
   card.prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   card.due = document.getElementById('editDue').value || null;
-
   save();
   closeModal();
   renderMain();
@@ -498,19 +549,13 @@ function delCard(boardId, cardId) {
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
   if (!card) return;
-
-  confirm(
-    '🗑️',
-    'Delete this task?',
-    `"${esc(card.title)}" will be removed forever.`,
-    () => {
-      board.cards = board.cards.filter(c => c.id !== cardId);
-      save();
-      closeModal();
-      renderMain();
-      toast('Task deleted');
-    }
-  );
+  confirm('🗑️', 'Delete this task?', `"${esc(card.title)}" will be removed forever.`, () => {
+    board.cards = board.cards.filter(c => c.id !== cardId);
+    save();
+    closeModal();
+    renderMain();
+    toast('Task deleted');
+  });
 }
 
 // ===== SETTINGS =====
@@ -564,7 +609,6 @@ function openSettings() {
 function selectTheme(id) {
   document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
   document.querySelector(`.theme-card[data-theme-id="${id}"]`)?.classList.add('active');
-  // Apply theme immediately for preview
   applyTheme(id);
 }
 
@@ -622,21 +666,18 @@ function saveNewBoard() {
   if (!name) { toast('Please enter a name!', 'err'); return; }
   const icon = document.getElementById('newBoardIcon').value.trim() || '📋';
   const color = document.querySelector('.color-opt.sel')?.dataset.c || 'pink';
-
   const b = { id: uid(), title: name, icon, color, cards: [] };
   state.boards.push(b);
   save();
   closeModal();
   activeBoardId = b.id;
   renderSidebar();
-  renderMain();
-  toast(`🌻 "${name}" board created!`, 'ok');
+  if (currentView === 'tasks') renderMain();
 }
 
 function editBoard() {
   const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-
   const colorsHTML = COLORS.map(c =>
     `<div class="color-opt${board.color===c?' sel':''}" style="background:${COLOR_HEX[c]}" data-c="${c}" onclick="selCol(this)"></div>`
   ).join('');
@@ -678,8 +719,7 @@ function saveEditBoard() {
   save();
   closeModal();
   renderSidebar();
-  renderMain();
-  toast('✨ Board updated!', 'ok');
+  if (currentView === 'tasks') renderMain();
 }
 
 function delBoard() {
@@ -691,8 +731,7 @@ function delBoard() {
     save();
     closeModal();
     renderSidebar();
-    renderMain();
-    toast('Board deleted');
+    if (currentView === 'tasks') renderMain();
   });
 }
 
@@ -711,7 +750,6 @@ function closeModal() {
   releaseFocus();
 }
 
-// ===== FOCUS TRAP =====
 function trapFocus(c) {
   if (focusHandler) { document.removeEventListener('keydown', focusHandler); focusHandler = null; }
   const f = c.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
@@ -731,12 +769,10 @@ function releaseFocus() {
   if (focusHandler) { document.removeEventListener('keydown', focusHandler); focusHandler = null; }
 }
 
-// ===== MODAL HELPERS =====
 function togTag(el) { el.classList.toggle('sel'); }
 function togPrio(el) { el.parentElement.querySelectorAll('.form-prio').forEach(e => e.classList.remove('sel','high','medium','low')); el.classList.add('sel',el.dataset.p); }
 function selCol(el) { el.parentElement.querySelectorAll('.color-opt').forEach(e => e.classList.remove('sel')); el.classList.add('sel'); }
 
-// ===== CONFIRM =====
 function confirm(icon, title, text, cb) {
   showModal(`
     <div class="confirm">
@@ -755,6 +791,614 @@ function confirm(icon, title, text, cb) {
 }
 function execConfirm() { if (confirmCb) confirmCb(); confirmCb = null; }
 function cancelConfirm() { confirmCb = null; closeModal(); }
+
+// ====================================================================
+// 📅 CALENDAR VIEW
+// ====================================================================
+
+function renderCalendar() {
+  if (currentView !== 'calendar') return;
+  
+  const { year, month, selectedDate } = calendarState;
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  
+  // Collect all tasks with due dates
+  const dateTasks = {};
+  state.boards.forEach(board => {
+    board.cards.forEach(card => {
+      if (card.due) {
+        if (!dateTasks[card.due]) dateTasks[card.due] = [];
+        dateTasks[card.due].push({ ...card, boardName: board.title, boardIcon: board.icon, boardColor: board.color, boardId: board.id });
+      }
+    });
+  });
+  
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Build grid
+  let dayCells = '';
+  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+  
+  for (let i = 0; i < totalCells; i++) {
+    let dayNum, dateStr, isOtherMonth = false;
+    
+    if (i < firstDay) {
+      // Previous month days
+      dayNum = daysInPrevMonth - firstDay + i + 1;
+      const prevMonth = month - 1;
+      const prevYear = prevMonth < 0 ? year - 1 : year;
+      const actualMonth = prevMonth < 0 ? 11 : prevMonth;
+      dateStr = `${prevYear}-${String(actualMonth + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      isOtherMonth = true;
+    } else if (i >= firstDay + daysInMonth) {
+      // Next month days
+      dayNum = i - firstDay - daysInMonth + 1;
+      const nextMonth = month + 1;
+      const nextYear = nextMonth > 11 ? year + 1 : year;
+      const actualMonth = nextMonth > 11 ? 0 : nextMonth;
+      dateStr = `${nextYear}-${String(actualMonth + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      isOtherMonth = true;
+    } else {
+      dayNum = i - firstDay + 1;
+      dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+    }
+    
+    const isToday = dateStr === today;
+    const isSelected = selectedDate === dateStr;
+    const tasksForDate = dateTasks[dateStr] || [];
+    
+    // Task dots
+    let dotsHTML = '';
+    if (tasksForDate.length > 0) {
+      const showDots = tasksForDate.slice(0, 4);
+      dotsHTML = `<div class="calendar-day-tasks">${showDots.map(t => {
+        let dotClass = t.prio === 'high' ? 'high' : t.prio === 'medium' ? 'medium' : 'low';
+        if (t.done) dotClass = 'done';
+        if (dateStr < today && !t.done) dotClass = 'overdue';
+        return `<span class="calendar-day-dot ${dotClass}" title="${esc(t.title)}"></span>`;
+      }).join('')}${tasksForDate.length > 4 ? '<span style="font-size:9px;color:var(--plum-muted)">+'+(tasksForDate.length-4)+'</span>' : ''}</div>`;
+    }
+    
+    dayCells += `
+      <div class="calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" onclick="selectDate('${dateStr}')">
+        <span class="day-number">${dayNum}</span>
+        ${dotsHTML}
+      </div>
+    `;
+  }
+  
+  // Tasks for selected date
+  let taskListHTML = '';
+  if (selectedDate && dateTasks[selectedDate]) {
+    const tasks = dateTasks[selectedDate];
+    taskListHTML = `
+      <div class="calendar-task-list">
+        <div class="calendar-task-list-title">📅 Tasks for ${selectedDate}</div>
+        ${tasks.length === 0 ? '<div class="empty-state" style="padding:20px"><div class="empty-state-icon" style="font-size:24px">🌻</div><div class="empty-state-text" style="font-size:13px">No tasks due this day</div></div>' : tasks.map(t => `
+          <div class="calendar-task-card" onclick="switchView('tasks');switchBoard('${t.boardId}')">
+            <span class="board-icon">${t.boardIcon}</span>
+            <span class="task-card-title${t.done ? ' task-card-done' : ''}">${esc(t.title)}</span>
+            <span class="task-card-board">${esc(t.boardName)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (selectedDate) {
+    taskListHTML = `
+      <div class="calendar-task-list">
+        <div class="calendar-task-list-title">📅 Tasks for ${selectedDate}</div>
+        <div class="empty-state" style="padding:20px"><div class="empty-state-icon" style="font-size:24px">🌻</div><div class="empty-state-text" style="font-size:13px">No tasks due this day</div></div>
+      </div>
+    `;
+  }
+  
+  document.getElementById('mainContent').innerHTML = `
+    <div class="calendar-view">
+      <div class="calendar-header">
+        <div class="calendar-header-left">
+          <button class="calendar-nav-btn" onclick="calendarMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+          <div class="calendar-title">${MONTHS[month]} ${year}</div>
+          <button class="calendar-nav-btn" onclick="calendarMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <button class="calendar-today-btn" onclick="calendarToday()">Today</button>
+      </div>
+      <div class="calendar-grid">
+        <div class="calendar-weekdays">
+          ${WEEKDAYS.map(d => `<div class="calendar-weekday">${d}</div>`).join('')}
+        </div>
+        <div class="calendar-days">${dayCells}</div>
+      </div>
+      ${taskListHTML}
+    </div>
+  `;
+}
+
+function calendarMonth(delta) {
+  calendarState.month += delta;
+  if (calendarState.month > 11) { calendarState.month = 0; calendarState.year++; }
+  else if (calendarState.month < 0) { calendarState.month = 11; calendarState.year--; }
+  renderCalendar();
+}
+
+function calendarToday() {
+  const now = new Date();
+  calendarState.year = now.getFullYear();
+  calendarState.month = now.getMonth();
+  calendarState.selectedDate = now.toISOString().split('T')[0];
+  renderCalendar();
+}
+
+function selectDate(dateStr) {
+  calendarState.selectedDate = calendarState.selectedDate === dateStr ? null : dateStr;
+  renderCalendar();
+}
+
+// ====================================================================
+// 🌻 FOCUS TIMER
+// ====================================================================
+
+function renderFocus() {
+  if (currentView !== 'focus') return;
+  
+  const mins = Math.floor(timerState.remaining / 60);
+  const secs = timerState.remaining % 60;
+  const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  
+  const phase = timerState.running && !timerState.paused ? 'Growing... 🌱' : 
+                timerState.completed ? 'Fully Bloomed! 🌻' :
+                timerState.paused ? 'Paused 🌿' : 'Ready to grow 🌻';
+  
+  const sessions = loadSessions();
+  const sessionLog = sessions.length > 0 ? `
+    <div class="focus-sessions">
+      <div class="focus-sessions-title">🌻 Planted Sunflowers</div>
+      ${sessions.slice().reverse().slice(0, 10).map(s => `
+        <div class="focus-session-item">
+          🌻 <span>${s.duration} min focus</span>
+          <span class="s-date">${s.date}</span>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+  
+  // Pick a motivational quote
+  const quoteIndex = Math.floor(Math.random() * MOTIVATIONS.length);
+  
+  document.getElementById('mainContent').innerHTML = `
+    <div class="focus-view">
+      <div class="focus-header">
+        <div class="focus-title">🌻 Focus Timer</div>
+        <div class="focus-subtitle">${timerState.completed ? '✨ Another sunflower planted! ✨' : 'Plant a sunflower, one focus session at a time'}</div>
+      </div>
+      
+      <div class="focus-canvas-wrap ${timerState.completed ? 'focus-complete' : ''}">
+        <canvas class="focus-canvas" id="focusCanvas" width="320" height="320"></canvas>
+        <div class="focus-timer-display">
+          <div class="focus-time">${timeStr}</div>
+          <div class="focus-phase">${phase}</div>
+        </div>
+      </div>
+      
+      <div class="focus-motivation" id="focusMotivation">
+        ${timerState.completed ? '🌻 Fully planted! You\'re amazing Nagham! 💖' : MOTIVATIONS[quoteIndex]}
+      </div>
+      
+      <div class="focus-controls">
+        ${!timerState.running && !timerState.completed ? [15, 25, 45].map(d => `
+          <button class="focus-duration-btn${timerState.selectedDuration === d * 60 ? ' active' : ''}" onclick="selectDuration(${d * 60})">
+            ${d === 15 ? '🌱' : d === 25 ? '🌻' : '🌿'} ${d} min
+          </button>
+        `).join('') : ''}
+      </div>
+      
+      <div class="focus-controls">
+        ${timerState.completed ? `
+          <button class="focus-action-btn focus-reset-btn" onclick="resetTimer()" title="Start new session">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        ` : timerState.running && timerState.paused ? `
+          <button class="focus-action-btn focus-start-btn" onclick="resumeTimer()" title="Resume"><i class="fa-solid fa-play"></i></button>
+          <button class="focus-action-btn focus-reset-btn" onclick="resetTimer()" title="Reset"><i class="fa-solid fa-stop"></i></button>
+        ` : timerState.running ? `
+          <button class="focus-action-btn focus-pause-btn" onclick="pauseTimer()" title="Pause"><i class="fa-solid fa-pause"></i></button>
+          <button class="focus-action-btn focus-reset-btn" onclick="resetTimer()" title="Reset"><i class="fa-solid fa-stop"></i></button>
+        ` : `
+          <button class="focus-action-btn focus-start-btn" onclick="startTimer()" title="Start Focus">
+            <i class="fa-solid fa-play"></i>
+          </button>
+        `}
+      </div>
+      
+      ${sessionLog}
+    </div>
+  `;
+  
+  // Draw the sunflower
+  drawSunflower(timerState.growth);
+}
+
+// ===== SUNFLOWER CANVAS DRAWING =====
+function drawSunflower(growth) {
+  const canvas = document.getElementById('focusCanvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  // Background gradient - sky
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+  skyGrad.addColorStop(0, '#FFF0F5');
+  skyGrad.addColorStop(1, '#FFFBF0');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, w, h);
+  
+  // Ground
+  ctx.fillStyle = '#8D6E63';
+  ctx.fillRect(0, h - 20, w, 20);
+  ctx.fillStyle = '#A1887F';
+  ctx.fillRect(0, h - 20, w, 2);
+  
+  // Grass
+  for (let i = 0; i < 20; i++) {
+    const gx = Math.random() * w;
+    const gh = 8 + Math.random() * 12;
+    ctx.strokeStyle = '#66BB6A';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(gx, h - 20);
+    ctx.quadraticCurveTo(gx + (Math.random() - 0.5) * 8, h - 20 - gh * 0.6, gx + (Math.random() - 0.5) * 4, h - 20 - gh);
+    ctx.stroke();
+  }
+  
+  if (growth < 1) {
+    // Seed in soil
+    ctx.fillStyle = '#5D4037';
+    ctx.beginPath();
+    ctx.ellipse(cx, h - 24, 6, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#8D6E63';
+    ctx.beginPath();
+    ctx.ellipse(cx - 1, h - 26, 3, 4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  
+  // Stem height based on growth (0-100%)
+  const maxStemH = h * 0.65;
+  const stemH = Math.max(15, maxStemH * (growth / 100));
+  const soilTop = h - 20;
+  const stemEndY = soilTop - stemH;
+  
+  // Draw stem
+  ctx.strokeStyle = '#4CAF50';
+  ctx.lineWidth = 4 + (growth / 100) * 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, soilTop);
+  ctx.quadraticCurveTo(cx + 3, soilTop - stemH * 0.4, cx + 2, soilTop - stemH * 0.7);
+  ctx.lineTo(cx, soilTop - stemH);
+  ctx.stroke();
+  
+  // Draw leaves (appear at 20%+ growth)
+  if (growth > 20) {
+    const leafProgress = Math.min(1, (growth - 20) / 30);
+    [1, -1].forEach(side => {
+      const leafY = soilTop - stemH * (0.3 + Math.random() * 0.3);
+      const leafSize = 8 + 12 * leafProgress;
+      ctx.fillStyle = `rgba(76, 175, 80, ${0.5 + 0.5 * leafProgress})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + side * (6 + leafSize * 0.5), leafY, leafSize, leafSize * 0.4, side * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#388E3C';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + side * 3, leafY);
+      ctx.quadraticCurveTo(cx + side * (3 + leafSize * 0.6), leafY - 1, cx + side * (3 + leafSize * 0.9), leafY);
+      ctx.stroke();
+    });
+  }
+  
+  // Draw bud (appears at 30%+ growth)
+  if (growth > 30) {
+    const budProgress = Math.min(1, (growth - 30) / 20);
+    const budY = stemEndY;
+    const budSize = 5 + 10 * budProgress;
+    
+    // Petals
+    const petalCount = Math.floor(8 + 16 * Math.min(1, (growth - 30) / 50));
+    const petalProgress = Math.min(1, (growth - 30) / 60);
+    
+    for (let i = 0; i < petalCount; i++) {
+      const angle = (i / petalCount) * Math.PI * 2;
+      const petalLen = 6 + petalProgress * 14;
+      const petalW = 3 + petalProgress * 6;
+      const px = cx + Math.cos(angle) * budSize;
+      const py = budY + Math.sin(angle) * budSize * 0.8;
+      
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle);
+      
+      // Gradient petal
+      const grad = ctx.createLinearGradient(0, 0, petalLen, 0);
+      grad.addColorStop(0, '#FFD700');
+      grad.addColorStop(0.5, '#FFC107');
+      grad.addColorStop(1, '#FFB300');
+      ctx.fillStyle = grad;
+      
+      ctx.beginPath();
+      ctx.ellipse(0, 0, petalLen, petalW, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Petal vein
+      ctx.strokeStyle = 'rgba(255, 160, 0, 0.3)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(petalLen * 0.8, 0);
+      ctx.stroke();
+      
+      ctx.restore();
+    }
+    
+    // Center disc
+    const discSize = 5 + budProgress * 10;
+    ctx.fillStyle = '#5D4037';
+    ctx.beginPath();
+    ctx.ellipse(cx, budY, discSize, discSize * 0.85, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Seeds in center
+    ctx.fillStyle = '#3E2723';
+    for (let i = 0; i < Math.floor(10 + budProgress * 15); i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * discSize * 0.7;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, budY + Math.sin(a) * r * 0.85, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Sunny face when bloomed
+    if (growth > 85) {
+      ctx.fillStyle = '#3E2723';
+      // Eyes
+      ctx.beginPath();
+      ctx.arc(cx - 4, budY - 2, 2, 0, Math.PI * 2);
+      ctx.arc(cx + 4, budY - 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // Smile
+      ctx.beginPath();
+      ctx.arc(cx, budY + 3, 4, 0.1, Math.PI - 0.1);
+      ctx.strokeStyle = '#3E2723';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+  
+  // Sparkle effects at high growth
+  if (growth > 70) {
+    const sparkleCount = Math.floor((growth - 70) / 5);
+    for (let i = 0; i < sparkleCount; i++) {
+      const sx = cx + (Math.random() - 0.5) * 60;
+      const sy = stemEndY - 20 + Math.random() * 30;
+      const size = 1 + Math.random() * 2;
+      ctx.fillStyle = `rgba(255, 215, 0, ${0.3 + Math.random() * 0.5})`;
+      ctx.beginPath();
+      // Star shape
+      for (let j = 0; j < 4; j++) {
+        const a = (j / 4) * Math.PI * 2;
+        if (j === 0) ctx.moveTo(sx + Math.cos(a) * size, sy + Math.sin(a) * size);
+        else ctx.lineTo(sx + Math.cos(a) * size, sy + Math.sin(a) * size);
+        const a2 = a + Math.PI / 4;
+        ctx.lineTo(sx + Math.cos(a2) * size * 0.5, sy + Math.sin(a2) * size * 0.5);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+}
+
+// ===== TIMER CONTROLS =====
+function selectDuration(seconds) {
+  timerState.selectedDuration = seconds;
+  timerState.duration = seconds;
+  timerState.total = seconds;
+  timerState.remaining = seconds;
+  timerState.growth = 0;
+  timerState.completed = false;
+  renderFocus();
+}
+
+function tickTimer() {
+  timerState.remaining--;
+  timerState.growth = ((timerState.total - timerState.remaining) / timerState.total) * 100;
+  
+  if (timerState.remaining <= 0) {
+    clearInterval(timerState.interval);
+    timerState.interval = null;
+    timerState.remaining = 0;
+    timerState.growth = 100;
+    timerState.running = false;
+    timerState.completed = true;
+    completeTimer();
+    return;
+  }
+  
+  // Lightweight update: just update time display and canvas
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  // Update time text
+  const mins = Math.floor(timerState.remaining / 60);
+  const secs = timerState.remaining % 60;
+  const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  const timeEl = document.querySelector('.focus-time');
+  if (timeEl) timeEl.textContent = timeStr;
+  
+  // Update phase text
+  const phaseEl = document.querySelector('.focus-phase');
+  if (phaseEl) {
+    phaseEl.textContent = timerState.paused ? 'Paused 🌿' : 'Growing... 🌱';
+  }
+  
+  // Update motivation randomly
+  if (Math.random() < 0.05) {
+    const motEl = document.getElementById('focusMotivation');
+    if (motEl) motEl.textContent = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+  }
+  
+  // Redraw sunflower
+  drawSunflower(timerState.growth);
+}
+
+function startTimer() {
+  if (timerState.running) return;
+  timerState.running = true;
+  timerState.paused = false;
+  timerState.completed = false;
+  timerState.duration = timerState.selectedDuration;
+  timerState.total = timerState.selectedDuration;
+  timerState.remaining = timerState.selectedDuration;
+  timerState.growth = 0;
+  
+  // Set initial state on UI
+  const timeEl = document.querySelector('.focus-time');
+  const mins = Math.floor(timerState.remaining / 60);
+  const secs = timerState.remaining % 60;
+  if (timeEl) timeEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  
+  const phaseEl = document.querySelector('.focus-phase');
+  if (phaseEl) phaseEl.textContent = 'Growing... 🌱';
+  
+  // Update control buttons
+  updateFocusControls();
+  
+  timerState.interval = setInterval(tickTimer, 1000);
+}
+
+function updateFocusControls() {
+  const controls = document.querySelector('.focus-controls');
+  if (!controls) return;
+  
+  // Replace the last controls group (the action buttons)
+  // Find the last .focus-controls element
+  const allControls = document.querySelectorAll('.focus-controls');
+  const lastControls = allControls[allControls.length - 1];
+  if (!lastControls) return;
+  
+  if (timerState.completed) {
+    lastControls.innerHTML = `
+      <button class="focus-action-btn focus-reset-btn" onclick="resetTimer()" title="Start new session">
+        <i class="fa-solid fa-rotate"></i>
+      </button>
+    `;
+  } else if (timerState.running && timerState.paused) {
+    lastControls.innerHTML = `
+      <button class="focus-action-btn focus-start-btn" onclick="resumeTimer()" title="Resume"><i class="fa-solid fa-play"></i></button>
+      <button class="focus-action-btn focus-reset-btn" onclick="resetTimer()" title="Reset"><i class="fa-solid fa-stop"></i></button>
+    `;
+  } else if (timerState.running) {
+    lastControls.innerHTML = `
+      <button class="focus-action-btn focus-pause-btn" onclick="pauseTimer()" title="Pause"><i class="fa-solid fa-pause"></i></button>
+      <button class="focus-action-btn focus-reset-btn" onclick="resetTimer()" title="Reset"><i class="fa-solid fa-stop"></i></button>
+    `;
+  } else {
+    lastControls.innerHTML = `
+      <button class="focus-action-btn focus-start-btn" onclick="startTimer()" title="Start Focus">
+        <i class="fa-solid fa-play"></i>
+      </button>
+    `;
+  }
+}
+
+function pauseTimer() {
+  timerState.paused = true;
+  if (timerState.interval) {
+    clearInterval(timerState.interval);
+    timerState.interval = null;
+  }
+  updateTimerDisplay();
+  updateFocusControls();
+}
+
+function resumeTimer() {
+  timerState.paused = false;
+  updateFocusControls();
+  timerState.interval = setInterval(tickTimer, 1000);
+}
+
+function resetTimer() {
+  if (timerState.interval) {
+    clearInterval(timerState.interval);
+    timerState.interval = null;
+  }
+  timerState.running = false;
+  timerState.paused = false;
+  timerState.completed = false;
+  timerState.remaining = timerState.selectedDuration;
+  timerState.duration = timerState.selectedDuration;
+  timerState.total = timerState.selectedDuration;
+  timerState.growth = 0;
+  renderFocus();
+}
+
+function completeTimer() {
+  // Save session
+  const sessions = loadSessions();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  sessions.push({
+    id: uid(),
+    duration: Math.floor(timerState.duration / 60),
+    date: dateStr,
+    timestamp: now.toISOString()
+  });
+  saveSessions(sessions);
+  
+  renderFocus();
+  
+  // Show celebration
+  toast('🌻 Sunflower planted! You did it! 💖', 'ok');
+  
+  // Confetti!
+  launchConfetti();
+  
+  // Motivation message
+  setTimeout(() => {
+    const msg = document.getElementById('focusMotivation');
+    if (msg) msg.textContent = '🌻 Fully planted! You\'re amazing Nagham! 💖';
+  }, 100);
+}
+
+// ===== CONFETTI =====
+function launchConfetti() {
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+  
+  const colors = ['#FF6B9D', '#FFD93D', '#66BB6A', '#64B5F6', '#CE93D8', '#FFB74D', '#FF4757', '#FFD700'];
+  
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.width = (5 + Math.random() * 8) + 'px';
+    piece.style.height = (5 + Math.random() * 8) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+    piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+    piece.style.animationDelay = (Math.random() * 0.5) + 's';
+    container.appendChild(piece);
+  }
+  
+  setTimeout(() => container.remove(), 4000);
+}
 
 // ===== KEYBOARD =====
 document.addEventListener('keydown', e => {
@@ -779,5 +1423,6 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 // ===== INIT =====
 applyTheme(settings.theme);
 renderSidebar();
-renderMain();
+// Default to tasks view
+switchView('tasks');
 toast('🌻 Welcome, Nagham!', 'ok');
