@@ -412,6 +412,107 @@ html, body {
 .card-action-btn:hover { background: rgba(255,107,157,0.1); color: var(--pink); }
 .card-action-btn.del:hover { background: rgba(255,71,87,0.1); color: var(--red); }
 
+/* ===== SEARCH BAR ===== */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 1.5px solid rgba(45,27,46,0.06);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  transition: border-color 150ms ease;
+}
+
+.search-bar:focus-within {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px rgba(255,107,157,0.08);
+}
+
+.search-bar i {
+  color: var(--plum-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--plum);
+  background: transparent;
+}
+
+.search-input::placeholder { color: #B8ADBB; }
+
+.search-clear {
+  border: none;
+  background: rgba(45,27,46,0.06);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--plum-muted);
+  font-size: 11px;
+  transition: all 100ms ease;
+  flex-shrink: 0;
+}
+
+.search-clear:hover { background: var(--pink); color: white; }
+
+/* ===== DUE DATES ===== */
+.card-due {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: #F5F5F5;
+  color: var(--plum-muted);
+}
+
+.card-due.overdue {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.card-due.due-today {
+  background: #FFF8E1;
+  color: #F57F17;
+}
+
+.card-due.due-soon {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+/* ===== DRAG & DROP REORDERING ===== */
+.card[draggable="true"] {
+  cursor: grab;
+}
+
+.card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.card.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
+
+.card.drag-over {
+  border-color: var(--pink);
+  border-style: dashed;
+  background: rgba(255,107,157,0.04);
+  transform: translateX(4px);
+}
+
 /* ===== EMPTY STATE ===== */
 .empty-state {
   text-align: center;

@@ -8,33 +8,33 @@ const DATA = {
   boards: [
     { id: 'wn', title: 'WithNagham', icon: '🎬', color: 'pink',
       cards: [
-        { id: 'c1', title: 'Edit new reel for Instagram', desc: "Finish editing the behind-the-scenes reel about today's shoot", prio: 'high', tags: ['content'], done: false },
-        { id: 'c2', title: 'Plan content calendar', desc: 'Outline posts, reels, and stories for the week ahead', prio: 'medium', tags: ['content'], done: false },
-        { id: 'c3', title: 'Respond to brand DMs', desc: 'Check Instagram inbox and reply to partnership offers', prio: 'high', tags: ['work'], done: false }
+        { id: 'c1', title: 'Edit new reel for Instagram', desc: "Finish editing the behind-the-scenes reel about today's shoot", prio: 'high', tags: ['content'], done: false, due: '2026-07-25' },
+        { id: 'c2', title: 'Plan content calendar', desc: 'Outline posts, reels, and stories for the week ahead', prio: 'medium', tags: ['content'], done: false, due: '2026-07-28' },
+        { id: 'c3', title: 'Respond to brand DMs', desc: 'Check Instagram inbox and reply to partnership offers', prio: 'high', tags: ['work'], done: false, due: null }
       ] },
     { id: 'eh', title: 'Ehsas Store', icon: '🕯️', color: 'yellow',
       cards: [
-        { id: 'c4', title: 'Prepare candle batch', desc: 'Vanilla & lavender - 20 units needed', prio: 'high', tags: ['store'], done: false },
-        { id: 'c5', title: 'Product photoshoot', desc: 'Set up the photography corner with good lighting', prio: 'medium', tags: ['store', 'content'], done: false },
-        { id: 'c6', title: 'Write product descriptions', desc: 'Describe ingredients and benefits of each lotion', prio: 'low', tags: ['store'], done: false },
-        { id: 'c7', title: 'Order packaging supplies', desc: 'Jars, labels, and boxes for next collection', prio: 'medium', tags: ['store'], done: false }
+        { id: 'c4', title: 'Prepare candle batch', desc: 'Vanilla & lavender - 20 units needed', prio: 'high', tags: ['store'], done: false, due: '2026-07-24' },
+        { id: 'c5', title: 'Product photoshoot', desc: 'Set up the photography corner with good lighting', prio: 'medium', tags: ['store', 'content'], done: false, due: '2026-07-30' },
+        { id: 'c6', title: 'Write product descriptions', desc: 'Describe ingredients and benefits of each lotion', prio: 'low', tags: ['store'], done: false, due: null },
+        { id: 'c7', title: 'Order packaging supplies', desc: 'Jars, labels, and boxes for next collection', prio: 'medium', tags: ['store'], done: false, due: '2026-08-05' }
       ] },
     { id: 'oc', title: 'Oreo Cafe', icon: '☕', color: 'orange',
       cards: [
-        { id: 'c8', title: 'Design new menu board', desc: 'Update prices and add new frappe flavors', prio: 'high', tags: ['work'], done: true },
-        { id: 'c9', title: 'Instagram weekend special', desc: 'Promote the new Oreo cheesecake slice', prio: 'medium', tags: ['content'], done: false },
-        { id: 'c10', title: 'Check coffee bean stock', desc: 'Order from supplier before Thursday', prio: 'high', tags: ['work', 'urgent'], done: false }
+        { id: 'c8', title: 'Design new menu board', desc: 'Update prices and add new frappe flavors', prio: 'high', tags: ['work'], done: true, due: null },
+        { id: 'c9', title: 'Instagram weekend special', desc: 'Promote the new Oreo cheesecake slice', prio: 'medium', tags: ['content'], done: false, due: '2026-07-26' },
+        { id: 'c10', title: 'Check coffee bean stock', desc: 'Order from supplier before Thursday', prio: 'high', tags: ['work', 'urgent'], done: false, due: '2026-07-23' }
       ] },
     { id: 'tm', title: 'Tech Mindset LB', icon: '💻', color: 'blue',
       cards: [
-        { id: 'c11', title: 'Schedule tech tip post', desc: 'Topic: Top 5 productivity apps', prio: 'medium', tags: ['content', 'work'], done: false },
-        { id: 'c12', title: 'Edit AI tools video', desc: 'Keep under 60 seconds - add captions', prio: 'high', tags: ['content'], done: false },
-        { id: 'c13', title: 'Client website inquiry', desc: 'They want a full e-commerce solution', prio: 'low', tags: ['work'], done: false }
+        { id: 'c11', title: 'Schedule tech tip post', desc: 'Topic: Top 5 productivity apps', prio: 'medium', tags: ['content', 'work'], done: false, due: '2026-07-29' },
+        { id: 'c12', title: 'Edit AI tools video', desc: 'Keep under 60 seconds - add captions', prio: 'high', tags: ['content'], done: false, due: '2026-07-25' },
+        { id: 'c13', title: 'Client website inquiry', desc: 'They want a full e-commerce solution', prio: 'low', tags: ['work'], done: false, due: null }
       ] },
     { id: 'mc', title: 'More Clients', icon: '📋', color: 'purple',
       cards: [
-        { id: 'c14', title: 'Send monthly reports', desc: 'Analytics to all managed accounts', prio: 'medium', tags: ['work', 'meeting'], done: false },
-        { id: 'c15', title: 'Brainstorming session', desc: 'New content ideas for all clients', prio: 'low', tags: ['idea', 'meeting'], done: false }
+        { id: 'c14', title: 'Send monthly reports', desc: 'Analytics to all managed accounts', prio: 'medium', tags: ['work', 'meeting'], done: false, due: '2026-07-31' },
+        { id: 'c15', title: 'Brainstorming session', desc: 'New content ideas for all clients', prio: 'low', tags: ['idea', 'meeting'], done: false, due: null }
       ] }
   ]
 };
@@ -90,17 +90,31 @@ function renderSidebar() {
 // ===== SWITCH BOARD =====
 function switchBoard(id) {
   activeBoardId = id;
+  searchQuery = '';
   renderSidebar();
   renderMain();
 }
 
 // ===== RENDER MAIN =====
+let searchQuery = '';
+
 function renderMain() {
   const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) { document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🌻</div><div class="empty-state-text">Create a board to get started!</div></div>'; return; }
 
   const total = board.cards.length;
   const done = board.cards.filter(c => c.done).length;
+
+  // Filter cards by search query
+  const q = searchQuery.toLowerCase().trim();
+  let filteredCards = board.cards;
+  if (q) {
+    filteredCards = board.cards.filter(c =>
+      c.title.toLowerCase().includes(q) ||
+      (c.desc || '').toLowerCase().includes(q) ||
+      (c.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
 
   document.getElementById('mainContent').innerHTML = `
     <div class="main-header">
@@ -118,25 +132,65 @@ function renderMain() {
       </div>
     </div>
     <div class="cards-area">
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input class="search-input" id="searchInput" placeholder="Search tasks..." value="${esc(searchQuery)}" oninput="doSearch(this.value)">
+        ${q ? '<button class="search-clear" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></button>' : ''}
+      </div>
       <div class="cards-grid" id="cardsGrid">
-        ${board.cards.length === 0 ? `
+        ${filteredCards.length === 0 ? `
           <div class="empty-state">
-            <div class="empty-state-icon">🌱</div>
-            <div class="empty-state-text">No tasks yet!</div>
-            <div class="empty-state-sub">Click "Add Task" to get started 🌻</div>
+            <div class="empty-state-icon">${q ? '🔍' : '🌱'}</div>
+            <div class="empty-state-text">${q ? 'No tasks match your search' : 'No tasks yet!'}</div>
+            <div class="empty-state-sub">${q ? 'Try different keywords' : 'Click "Add Task" to get started 🌻'}</div>
           </div>
-        ` : board.cards.map((c, i) => cardHTML(c, board.id, i)).join('')}
+        ` : filteredCards.map((c, i) => cardHTML(c, board.id, i)).join('')}
       </div>
     </div>
   `;
 
+  // Re-bind drag events after rendering
+  if (!q) bindDragDrop();
+}
+
+function doSearch(val) {
+  searchQuery = val;
+  renderMain();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  renderMain();
 }
 
 function cardHTML(c, boardId, idx) {
   const tags = c.tags?.length ? c.tags.map(t => `<span class="card-tag ${t}">${TAG_LABELS[t]||t}</span>`).join('') : '';
-  const prio = c.prio === 'high' ? '🔴 High' : c.prio === 'med' ? '🟡 Med' : '';
+  const prio = c.prio === 'high' ? '🔴 High' : c.prio === 'medium' ? '🟡 Med' : '';
+  
+  // Due date display (timezone-safe string comparison)
+  let dueHTML = '';
+  if (c.due) {
+    const today = new Date().toISOString().split('T')[0];
+    let dueClass = '';
+    let dueLabel = '';
+    if (c.due < today) {
+      const diff = Math.ceil((new Date(today) - new Date(c.due)) / (1000*60*60*24));
+      dueClass = 'overdue';
+      dueLabel = diff === 1 ? '⚠️ Due yesterday' : '⚠️ ' + diff + ' days overdue';
+    } else if (c.due === today) {
+      dueClass = 'due-today';
+      dueLabel = '🔔 Due today';
+    } else {
+      const diff = Math.ceil((new Date(c.due) - new Date(today)) / (1000*60*60*24));
+      if (diff === 1) { dueClass = 'due-soon'; dueLabel = '📅 Due tomorrow'; }
+      else if (diff <= 3) { dueClass = 'due-soon'; dueLabel = '📅 Due in ' + diff + ' days'; }
+      else { dueLabel = '📅 ' + c.due; }
+    }
+    dueHTML = `<span class="card-due ${dueClass}">${dueLabel}</span>`;
+  }
+
   return `
-    <div class="card${c.done ? ' done' : ''}" style="animation-delay:${idx*0.05}s" onclick="editCard('${boardId}','${c.id}')">
+    <div class="card${c.done ? ' done' : ''}" draggable="true" data-id="${c.id}" style="animation-delay:${idx*0.05}s" onclick="editCard('${boardId}','${c.id}')">
       <div class="card-check${c.done?' done':''}" onclick="event.stopPropagation();toggleDone('${boardId}','${c.id}')"></div>
       <div class="card-body">
         <div class="card-title">${esc(c.title)}</div>
@@ -144,6 +198,7 @@ function cardHTML(c, boardId, idx) {
         <div class="card-meta">
           ${tags}
           ${prio ? `<span class="card-priority">${prio}</span>` : ''}
+          ${dueHTML}
         </div>
       </div>
       <div class="card-actions">
@@ -152,6 +207,85 @@ function cardHTML(c, boardId, idx) {
       </div>
     </div>
   `;
+}
+
+// ===== DRAG & DROP REORDERING =====
+let dragSrcId = null;
+
+function bindDragDrop() {
+  const grid = document.getElementById('cardsGrid');
+  if (!grid) return;
+  
+  const cards = grid.querySelectorAll('.card[draggable]');
+  cards.forEach(card => {
+    card.addEventListener('dragstart', dragStart);
+    card.addEventListener('dragend', dragEnd);
+    card.addEventListener('dragover', dragOver);
+    card.addEventListener('dragenter', dragEnter);
+    card.addEventListener('dragleave', dragLeave);
+    card.addEventListener('drop', dragDrop);
+  });
+}
+
+function dragStart(e) {
+  dragSrcId = this.dataset.id;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.dataset.id);
+  // Don't show drag ghost image - use our own styling
+  const ghost = this.cloneNode(true);
+  ghost.style.opacity = '0.5';
+  ghost.style.position = 'absolute';
+  ghost.style.top = '-1000px';
+  document.body.appendChild(ghost);
+  e.dataTransfer.setDragImage(ghost, 0, 0);
+  setTimeout(() => ghost.remove(), 0);
+}
+
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function dragEnter(e) {
+  e.preventDefault();
+  if (this.dataset.id !== dragSrcId) {
+    this.classList.add('drag-over');
+  }
+}
+
+function dragLeave() {
+  this.classList.remove('drag-over');
+}
+
+function dragDrop(e) {
+  e.stopPropagation();
+  this.classList.remove('drag-over');
+  
+  const fromId = dragSrcId;
+  const toId = this.dataset.id;
+  if (!fromId || fromId === toId) return;
+  
+  const board = state.boards.find(b => b.id === activeBoardId);
+  if (!board) return;
+  
+  const fromIdx = board.cards.findIndex(c => c.id === fromId);
+  const toIdx = board.cards.findIndex(c => c.id === toId);
+  if (fromIdx === -1 || toIdx === -1) return;
+  
+  // Reorder
+  const [moved] = board.cards.splice(fromIdx, 1);
+  board.cards.splice(toIdx, 0, moved);
+  
+  save();
+  renderMain();
+  toast('✨ Task reordered!', 'ok');
+}
+
+function dragEnd() {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragSrcId = null;
 }
 
 // ===== TOGGLE DONE =====
@@ -201,6 +335,10 @@ function addCard() {
           <button class="form-prio" data-p="high" onclick="togPrio(this)">🔴 High</button>
         </div>
       </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-calendar"></i> Due Date <span style="color:var(--plum-muted);font-weight:400">(optional)</span></label>
+        <input class="form-i" type="date" id="inpDate">
+      </div>
     </div>
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -220,8 +358,9 @@ function saveNewCard() {
   const desc = document.getElementById('inpDesc').value.trim();
   const tags = [...document.querySelectorAll('.form-tag.sel')].map(el => el.dataset.t);
   const prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
+  const due = document.getElementById('inpDate').value || null;
 
-  board.cards.unshift({ id: uid(), title, desc, prio, tags, done: false });
+  board.cards.unshift({ id: uid(), title, desc, prio, tags, done: false, due });
   save();
   closeModal();
   renderMain();
@@ -265,6 +404,10 @@ function editCard(boardId, cardId) {
           <button class="form-prio${card.prio==='high'?' sel high':''}" data-p="high" onclick="togPrio(this)">🔴 High</button>
         </div>
       </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-calendar"></i> Due Date <span style="color:var(--plum-muted);font-weight:400">(optional)</span></label>
+        <input class="form-i" type="date" id="editDue" value="${card.due||''}">
+      </div>
     </div>
     <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -286,6 +429,7 @@ function saveEdit(boardId, cardId) {
   card.desc = document.getElementById('editDesc').value.trim();
   card.tags = [...document.querySelectorAll('#editModal .form-tag.sel')].map(el => el.dataset.t);
   card.prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
+  card.due = document.getElementById('editDue').value || null;
 
   save();
   closeModal();
