@@ -1939,6 +1939,24 @@ function lockApp() {
   document.getElementById('lockScreen').classList.remove('hidden');
 }
 
+// ===== KEYBOARD PIN SUPPORT =====
+document.addEventListener('keydown', function(e) {
+  const lockScreen = document.getElementById('lockScreen');
+  if (!lockScreen || lockScreen.classList.contains('hidden')) return;
+  
+  if (e.key >= '0' && e.key <= '9') {
+    pinKey(e.key);
+  } else if (e.key === 'Backspace') {
+    pinClear();
+  } else if (e.key === 'Enter') {
+    if (pinEntry.length > 0) pinSubmit();
+  } else if (e.key === 'Escape') {
+    pinEntry = '';
+    updatePinDots();
+    document.getElementById('lockError').classList.remove('show');
+  }
+});
+
 // ===== INIT =====
 function initApp() {
   applyTheme(settings.theme);
