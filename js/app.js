@@ -537,6 +537,7 @@ function cardHTML(c, boardId, idx) {
       <div class="card-body">
         <div class="card-title">${esc(c.title)}</div>
         ${c.desc ? `<div class="card-desc">${esc(c.desc)}</div>` : ''}
+        ${c.notes && c.notes !== '<br>' ? `<div class="card-notes-preview">${c.notes}</div>` : ''}
         <div class="card-meta">
           ${tags}
           ${prio ? `<span class="card-priority">${prio}</span>` : ''}
@@ -649,8 +650,22 @@ function addCard() {
         <input class="form-i" id="inpTitle" placeholder="What needs to be done?">
       </div>
       <div class="form-g">
-        <label class="form-l"><i class="fa-regular fa-align-left"></i> Description</label>
-        <textarea class="form-t" id="inpDesc" placeholder="Add details..."></textarea>
+        <label class="form-l"><i class="fa-regular fa-pen"></i> Notes</label>
+        <div class="editor-toolbar" id="inpToolbar">
+          <button class="editor-btn" onclick="fmtCmd('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('strikeThrough')" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+          <span class="editor-sep"></span>
+          <button class="editor-btn" onclick="fmtCmd('formatBlock','h3')" title="Heading"><i class="fa-solid fa-heading"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('formatBlock','p')" title="Paragraph"><i class="fa-solid fa-paragraph"></i></button>
+          <span class="editor-sep"></span>
+          <button class="editor-btn" onclick="fmtCmd('insertUnorderedList')" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('insertOrderedList')" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+          <span class="editor-sep"></span>
+          <button class="editor-btn" onclick="fmtCmd('removeFormat')" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+        </div>
+        <div class="editor-area" id="inpNotes" contenteditable="true" data-placeholder="Write your notes here..."></div>
       </div>
       <div class="form-g">
         <label class="form-l"><i class="fa-regular fa-tags"></i> Tags</label>
@@ -691,14 +706,16 @@ async function saveNewCard() {
   if (!title) { toast('Please enter a title!', 'err'); return; }
   const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-  const desc = document.getElementById('inpDesc').value.trim();
+  const notesEl = document.getElementById('inpNotes');
+  const notes = notesEl ? notesEl.innerHTML.trim() : '';
+  const desc = notes ? notes.replace(/<[^>]+>/g,'').trim().substring(0,120) : '';
   const tags = [...document.querySelectorAll('.form-tag.sel')].map(el => el.dataset.t);
   const prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   const due = document.getElementById('inpDate').value || null;
   
   const cardId = uid();
   const pendingFiles = getPendingFiles('inpFilePreview');
-  board.cards.unshift({ id: cardId, title, desc, prio, tags, done: false, due, fileCount: pendingFiles.length });
+  board.cards.unshift({ id: cardId, title, desc, notes, prio, tags, done: false, due, fileCount: pendingFiles.length });
   
   // Save pending files to IndexedDB
   for (const f of pendingFiles) {
@@ -763,8 +780,22 @@ async function editCard(boardId, cardId) {
         <input class="form-i" id="editTitle" value="${esc(card.title)}">
       </div>
       <div class="form-g">
-        <label class="form-l"><i class="fa-regular fa-align-left"></i> Description</label>
-        <textarea class="form-t" id="editDesc">${esc(card.desc||'')}</textarea>
+        <label class="form-l"><i class="fa-regular fa-pen"></i> Notes</label>
+        <div class="editor-toolbar" id="editToolbar">
+          <button class="editor-btn" onclick="fmtCmd('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('strikeThrough')" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+          <span class="editor-sep"></span>
+          <button class="editor-btn" onclick="fmtCmd('formatBlock','h3')" title="Heading"><i class="fa-solid fa-heading"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('formatBlock','p')" title="Paragraph"><i class="fa-solid fa-paragraph"></i></button>
+          <span class="editor-sep"></span>
+          <button class="editor-btn" onclick="fmtCmd('insertUnorderedList')" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+          <button class="editor-btn" onclick="fmtCmd('insertOrderedList')" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+          <span class="editor-sep"></span>
+          <button class="editor-btn" onclick="fmtCmd('removeFormat')" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+        </div>
+        <div class="editor-area" id="editNotes" contenteditable="true" data-placeholder="Write your notes here...">${card.notes||''}</div>
       </div>
       <div class="form-g">
         <label class="form-l"><i class="fa-regular fa-tags"></i> Tags</label>
@@ -870,7 +901,9 @@ async function saveEdit(boardId, cardId) {
   const title = document.getElementById('editTitle').value.trim();
   if (!title) { toast('Title cannot be empty!', 'err'); return; }
   card.title = title;
-  card.desc = document.getElementById('editDesc').value.trim();
+  const notesEl = document.getElementById('editNotes');
+  card.notes = notesEl ? notesEl.innerHTML.trim() : '';
+  card.desc = card.notes ? card.notes.replace(/<[^>]+>/g,'').trim().substring(0,120) : '';
   card.tags = [...document.querySelectorAll('#editModal .form-tag.sel')].map(el => el.dataset.t);
   card.prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   card.due = document.getElementById('editDue').value || null;
@@ -1113,6 +1146,16 @@ function closeModal() {
   document.getElementById('modalOverlay').classList.remove('active');
   document.body.style.overflow = '';
   releaseFocus();
+}
+
+// ===== RICH TEXT EDITOR =====
+function fmtCmd(cmd, val) {
+  document.execCommand(cmd, false, val || null);
+  // Keep focus on the active editor
+  const active = document.activeElement;
+  if (active && active.classList.contains('editor-area')) {
+    active.focus();
+  }
 }
 
 function trapFocus(c) {
