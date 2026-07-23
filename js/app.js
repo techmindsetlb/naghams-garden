@@ -862,15 +862,18 @@ async function viewCardFiles(boardId, cardId) {
     <div class="modal-b">
       ${files.map(f => `
         <div class="file-viewer-item">
-          <div class="file-viewer-icon">
-            ${f.type.startsWith('image/') ? `<img src="${f.dataUrl}" class="file-viewer-thumb" onclick="openFileViewer('${f.id}')">` : '📎'}
+          <div class="file-viewer-icon" onclick="${f.type.startsWith('image/') ? `openFileViewer('${f.id}')` : `viewFile('${f.id}')`}">
+            ${f.type.startsWith('image/') ? `<img src="${f.dataUrl}" class="file-viewer-thumb">` : `<span class="file-viewer-fallback">📎</span>`}
           </div>
           <div class="file-viewer-info">
-            <div class="file-viewer-name">${esc(f.name)}</div>
+            <div class="file-viewer-name" onclick="${f.type.startsWith('image/') ? `openFileViewer('${f.id}')` : `viewFile('${f.id}')`}">${esc(f.name)}</div>
             <div class="file-viewer-size">${formatFileSize(f.size)}</div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="downloadFile('${f.id}')">
+          <button class="btn btn-ghost btn-sm" onclick="downloadFile('${f.id}')" title="Download">
             <i class="fa-solid fa-download"></i>
+          </button>
+          <button class="btn btn-pink btn-sm" onclick="${f.type.startsWith('image/') ? `openFileViewer('${f.id}')` : `viewFile('${f.id}')`}">
+            <i class="fa-solid fa-eye"></i>
           </button>
         </div>
       `).join('')}
@@ -887,6 +890,29 @@ async function downloadFile(fileId) {
   document.body.appendChild(a);
   a.click();
   a.remove();
+}
+
+async function viewFile(fileId) {
+  const file = await getFileById(fileId);
+  if (!file) return;
+  // Open file in a new tab
+  const win = window.open();
+  if (win) {
+    win.document.write(`<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1a1a1a;font-family:sans-serif}img,video,embed{max-width:100%;max-height:100vh;box-shadow:0 4px 24px rgba(0,0,0,0.3);border-radius:4px}iframe{width:100vw;height:100vh;border:none}.fallback{color:white;text-align:center}.fallback h2{margin-bottom:8px}.fallback a{color:#FF6B9D;font-size:14px}</style>`);
+    if (file.type.startsWith('image/')) {
+      win.document.write(`<img src="${file.dataUrl}" alt="${esc(file.name)}">`);
+    } else if (file.type.startsWith('video/')) {
+      win.document.write(`<video src="${file.dataUrl}" controls autoplay style="max-width:100%;max-height:100vh"></video>`);
+    } else if (file.type === 'application/pdf') {
+      win.document.write(`<iframe src="${file.dataUrl}"></iframe>`);
+    } else {
+      win.document.write(`<div class="fallback"><h2>📎 ${esc(file.name)}</h2><p>${formatFileSize(file.size)}</p><a href="${file.dataUrl}" download="${esc(file.name)}">⬇️ Click to Download</a></div>`);
+    }
+    win.document.title = file.name;
+  } else {
+    // Popup blocked, fall back to download
+    downloadFile(fileId);
+  }
 }
 
 async function openFileViewer(fileId) {
@@ -1209,8 +1235,7 @@ function addChecklistItem(inputId, listId) {
   if (!list) return;
   const id = uid();
   list.insertAdjacentHTML('beforeend', `<div class="cl-item" data-cl-id="${id}">
-    <div class="cl-check" onclick="toggleClItem(this)"></div>
-    <span class="cl-text">${esc(text)}</span>
+    <div class="cl-check" onclick="toggleClItem(this)"></div>      <span class="cl-text" ondblclick="editClItem(this.closest('.cl-item'))">${esc(text)}</span>
     <button class="cl-remove" onclick="removeClItem(this)" title="Remove"><i class="fa-solid fa-xmark"></i></button>
   </div>`);
   input.value = '';
@@ -1220,6 +1245,34 @@ function addChecklistItem(inputId, listId) {
 function toggleClItem(el) {
   el.classList.toggle('done');
   el.closest('.cl-item').classList.toggle('done');
+}
+
+function editClItem(el) {
+  const span = el.querySelector('.cl-text');
+  if (!span) return;
+  const old = span.textContent;
+  const input = document.createElement('input');
+  input.className = 'cl-edit-input';
+  input.value = old;
+  input.setAttribute('data-cl-original', old);
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+  
+  function saveEdit() {
+    const val = input.value.trim();
+    const newSpan = document.createElement('span');
+    newSpan.className = 'cl-text';
+    newSpan.textContent = val || old;
+    newSpan.ondblclick = function() { editClItem(this.closest('.cl-item')); };
+    input.replaceWith(newSpan);
+  }
+  
+  input.addEventListener('blur', saveEdit);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = input.getAttribute('data-cl-original'); input.blur(); }
+  });
 }
 
 function removeClItem(el) {
@@ -1242,7 +1295,7 @@ function renderChecklistItems(items, listId) {
   list.innerHTML = (items || []).map(item =>
     `<div class="cl-item${item.done ? ' done' : ''}" data-cl-id="${item.id}">
       <div class="cl-check${item.done ? ' done' : ''}" onclick="toggleClItem(this)"></div>
-      <span class="cl-text">${esc(item.text)}</span>
+      <span class="cl-text" ondblclick="editClItem(this.closest('.cl-item'))">${esc(item.text)}</span>
       <button class="cl-remove" onclick="removeClItem(this)" title="Remove"><i class="fa-solid fa-xmark"></i></button>
     </div>`
   ).join('');
