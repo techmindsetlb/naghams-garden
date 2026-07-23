@@ -4,119 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🌻 Nagham's Productivity Garden</title>
-
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Font Awesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@400;500;600&family=Dancing+Script:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- ===== ANIMATED BACKGROUND ===== -->
-  <div class="bg-decoration">
-    <div class="bg-flower">🌻</div>
-    <div class="bg-flower">🌻</div>
-    <div class="bg-flower">🌻</div>
-  </div>
-
-  <!-- ===== TOAST CONTAINER ===== -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- ===== MAIN APP ===== -->
-  <div class="app-container" id="app">
-
-    <!-- HEADER -->
-    <header class="app-header">
-      <div class="header-content">
-        <div class="header-left">
-          <span class="header-sunflower">🌻</span>
-          <div>
-            <div class="header-title">
-              Nagham's Productivity Garden
-              <span class="header-title-sub">✨ grow your dreams, one task at a time ✨</span>
-            </div>
-          </div>
-        </div>
-        <div class="header-actions">
-          <div class="header-stats">
-            <span class="stat-item">
-              <i class="fa-regular fa-rectangle-list"></i>
-              <span id="totalBoards">0</span> boards
-            </span>
-            <span class="stat-item">
-              <i class="fa-regular fa-circle-check"></i>
-              <span id="totalTasks">0</span> tasks
-            </span>
-            <span class="stat-item">
-              <i class="fa-regular fa-circle"></i>
-              <span id="completedTasks">0</span> done
-            </span>
-          </div>
-          <div class="header-stats header-stats-mobile">
-            <span class="stat-item">
-              <i class="fa-regular fa-rectangle-list"></i>
-              <span id="totalBoardsMobile">0</span>
-            </span>
-            <span class="stat-item">
-              <i class="fa-regular fa-circle-check"></i>
-              <span id="totalTasksMobile">0</span>
-            </span>
-          </div>
-        </div>
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>🌻</span>
+        <span class="sidebar-title-text">Nagham's Garden</span>
       </div>
-    </header>
-
-    <!-- TOOLBAR -->
-    <div class="toolbar">
-      <button class="btn btn-primary" onclick="openAddBoardModal()">
-        <i class="fa-solid fa-plus"></i>
-        <span class="btn-text">New Board</span>
-      </button>
-      <button class="btn btn-yellow" onclick="safeOpenAddCardModal(getActiveBoardId())">
-        <i class="fa-solid fa-pen"></i>
-        <span class="btn-text">New Task</span>
-      </button>
-      <div style="flex:1"></div>
-      <button class="btn btn-ghost" onclick="openImportExport()" style="position:relative" id="importExportBtn">
-        <i class="fa-solid fa-database"></i>
-        <span class="btn-text">Data</span>
-        <div class="import-export-menu" id="importExportMenu">
-          <button class="import-export-menu-item" onclick="exportData()">
-            <i class="fa-solid fa-download"></i> Export Backup
-          </button>
-          <button class="import-export-menu-item" onclick="document.getElementById('importFile').click()">
-            <i class="fa-solid fa-upload"></i> Import Backup
-          </button>
-          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-          <button class="import-export-menu-item" onclick="resetAllData()" style="color:#FF4757">
-            <i class="fa-solid fa-trash-can"></i> Reset All
-          </button>
-        </div>
-      </button>
+      <div class="sidebar-sub">grow your dreams ✨</div>
     </div>
-
-    <!-- BOARDS -->
-    <div class="boards-wrapper" id="boardsWrapper">
-      <div class="boards-container" id="boardsContainer">
-        <!-- Boards are rendered by JS -->
-      </div>
-    </div>
+    <div class="sidebar-label">Boards</div>
+    <div class="boards-list" id="boardList"></div>
+    <button class="add-board-btn" onclick="addBoard()">
+      <i class="fa-solid fa-plus"></i>
+      <span>New Board</span>
+    </button>
   </div>
 
-  <!-- ===== MODAL OVERLAY ===== -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal" id="modalContent">
-      <!-- Modal content is rendered by JS -->
-    </div>
+  <!-- MAIN -->
+  <div class="main" id="mainContent">
+    <!-- Rendered by JS -->
   </div>
+</div>
 
-  <!-- ===== SCRIPTS ===== -->
-  <script src="js/app.js"></script>
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-c" id="toastC"></div>
+
+<script src="js/app.js"></script>
 </body>
 </html>

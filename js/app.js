@@ -1,1042 +1,512 @@
 /* =============================================================
-   NAGHAM'S PRODUCTIVITY GARDEN - App Script
-   Full Task Manager with Local Storage Persistence
+   NAGHAM'S PRODUCTIVITY GARDEN - Clean App
+   Trello-style Task Manager with Local Storage
    ============================================================= */
 
-// ========== DATA ==========
-const DEFAULT_DATA = {
+// ===== DATA =====
+const DATA = {
   boards: [
-    {
-      id: 'withnagham',
-      title: '✨ WithNagham',
-      icon: '🎬',
-      color: 'pink',
+    { id: 'wn', title: 'WithNagham', icon: '🎬', color: 'pink',
       cards: [
-        { id: 'c1', title: 'Edit new reel for Instagram', description: "Finish editing the behind-the-scenes reel about today's shoot", priority: 'high', tags: ['content'], done: false, createdAt: Date.now() - 86400000 },
-        { id: 'c2', title: 'Plan content calendar for next week', description: 'Outline posts, reels, and stories for the week ahead', priority: 'medium', tags: ['content'], done: false, createdAt: Date.now() - 43200000 },
-        { id: 'c3', title: 'Respond to brand collaboration DMs', description: 'Check Instagram inbox and reply to partnership offers', priority: 'high', tags: ['work'], done: false, createdAt: Date.now() - 21600000 }
-      ]
-    },
-    {
-      id: 'ehsas',
-      title: '🕯️ Ehsas Store',
-      icon: '🕯️',
-      color: 'yellow',
+        { id: 'c1', title: 'Edit new reel for Instagram', desc: "Finish editing the behind-the-scenes reel about today's shoot", prio: 'high', tags: ['content'], done: false },
+        { id: 'c2', title: 'Plan content calendar', desc: 'Outline posts, reels, and stories for the week ahead', prio: 'medium', tags: ['content'], done: false },
+        { id: 'c3', title: 'Respond to brand DMs', desc: 'Check Instagram inbox and reply to partnership offers', prio: 'high', tags: ['work'], done: false }
+      ] },
+    { id: 'eh', title: 'Ehsas Store', icon: '🕯️', color: 'yellow',
       cards: [
-        { id: 'c4', title: 'Prepare new candle batch for restock', description: 'Vanilla & lavender scent - 20 units needed', priority: 'high', tags: ['store'], done: false, createdAt: Date.now() - 72000000 },
-        { id: 'c5', title: 'Take product photos for new lotion line', description: 'Set up the photography corner with good lighting', priority: 'medium', tags: ['store', 'content'], done: false, createdAt: Date.now() - 36000000 },
-        { id: 'c6', title: 'Write product descriptions for website', description: 'Describe the ingredients and benefits of each lotion', priority: 'low', tags: ['store'], done: false, createdAt: Date.now() - 18000000 },
-        { id: 'c7', title: 'Order new packaging supplies', description: 'Jars, labels, and boxes for the next collection', priority: 'medium', tags: ['store'], done: false, createdAt: Date.now() - 9000000 }
-      ]
-    },
-    {
-      id: 'oreo',
-      title: '☕ Oreo Cafe',
-      icon: '☕',
-      color: 'orange',
+        { id: 'c4', title: 'Prepare candle batch', desc: 'Vanilla & lavender - 20 units needed', prio: 'high', tags: ['store'], done: false },
+        { id: 'c5', title: 'Product photoshoot', desc: 'Set up the photography corner with good lighting', prio: 'medium', tags: ['store', 'content'], done: false },
+        { id: 'c6', title: 'Write product descriptions', desc: 'Describe ingredients and benefits of each lotion', prio: 'low', tags: ['store'], done: false },
+        { id: 'c7', title: 'Order packaging supplies', desc: 'Jars, labels, and boxes for next collection', prio: 'medium', tags: ['store'], done: false }
+      ] },
+    { id: 'oc', title: 'Oreo Cafe', icon: '☕', color: 'orange',
       cards: [
-        { id: 'c8', title: 'Design new menu board', description: 'Update prices and add the new frappe flavors', priority: 'high', tags: ['work'], done: true, createdAt: Date.now() - 86400000 * 2 },
-        { id: 'c9', title: 'Create Instagram post for weekend special', description: 'Promote the new Oreo cheesecake slice', priority: 'medium', tags: ['content'], done: false, createdAt: Date.now() - 43200000 },
-        { id: 'c10', title: 'Check inventory - coffee beans running low', description: 'Order from the usual supplier before Thursday', priority: 'high', tags: ['work', 'urgent'], done: false, createdAt: Date.now() - 21600000 }
-      ]
-    },
-    {
-      id: 'techmindset',
-      title: '💻 Tech Mindset LB',
-      icon: '💻',
-      color: 'blue',
+        { id: 'c8', title: 'Design new menu board', desc: 'Update prices and add new frappe flavors', prio: 'high', tags: ['work'], done: true },
+        { id: 'c9', title: 'Instagram weekend special', desc: 'Promote the new Oreo cheesecake slice', prio: 'medium', tags: ['content'], done: false },
+        { id: 'c10', title: 'Check coffee bean stock', desc: 'Order from supplier before Thursday', prio: 'high', tags: ['work', 'urgent'], done: false }
+      ] },
+    { id: 'tm', title: 'Tech Mindset LB', icon: '💻', color: 'blue',
       cards: [
-        { id: 'c11', title: 'Schedule tech tip carousel for Tuesday', description: 'Topic: Top 5 productivity apps for entrepreneurs', priority: 'medium', tags: ['content', 'work'], done: false, createdAt: Date.now() - 86400000 },
-        { id: 'c12', title: 'Edit video about AI tools for small businesses', description: 'Keep it under 60 seconds - add captions and b-roll', priority: 'high', tags: ['content'], done: false, createdAt: Date.now() - 43200000 },
-        { id: 'c13', title: 'Respond to client inquiry about website', description: 'They want a full e-commerce solution', priority: 'low', tags: ['work'], done: false, createdAt: Date.now() - 21600000 }
-      ]
-    },
-    {
-      id: 'general',
-      title: '📋 More Clients',
-      icon: '📋',
-      color: 'purple',
+        { id: 'c11', title: 'Schedule tech tip post', desc: 'Topic: Top 5 productivity apps', prio: 'medium', tags: ['content', 'work'], done: false },
+        { id: 'c12', title: 'Edit AI tools video', desc: 'Keep under 60 seconds - add captions', prio: 'high', tags: ['content'], done: false },
+        { id: 'c13', title: 'Client website inquiry', desc: 'They want a full e-commerce solution', prio: 'low', tags: ['work'], done: false }
+      ] },
+    { id: 'mc', title: 'More Clients', icon: '📋', color: 'purple',
       cards: [
-        { id: 'c14', title: 'Follow up with social media clients', description: 'Send monthly analytics reports to all managed accounts', priority: 'medium', tags: ['work', 'meeting'], done: false, createdAt: Date.now() - 86400000 },
-        { id: 'c15', title: 'Creative brainstorming session', description: 'New content ideas for all client accounts this month', priority: 'low', tags: ['idea', 'meeting'], done: false, createdAt: Date.now() - 43200000 }
-      ]
-    }
+        { id: 'c14', title: 'Send monthly reports', desc: 'Analytics to all managed accounts', prio: 'medium', tags: ['work', 'meeting'], done: false },
+        { id: 'c15', title: 'Brainstorming session', desc: 'New content ideas for all clients', prio: 'low', tags: ['idea', 'meeting'], done: false }
+      ] }
   ]
 };
 
-const COLORS = [
-  { name: 'pink', hex: '#FF6B9D' },
-  { name: 'yellow', hex: '#FFD93D' },
-  { name: 'green', hex: '#66BB6A' },
-  { name: 'purple', hex: '#CE93D8' },
-  { name: 'blue', hex: '#64B5F6' },
-  { name: 'orange', hex: '#FFB74D' },
-  { name: 'teal', hex: '#4DB6AC' },
-  { name: 'red', hex: '#EF5350' }
-];
+const TAG_LABELS = { work: '💼 Work', personal: '💖 Personal', content: '🎬 Content', store: '🛍️ Store', meeting: '📅 Meeting', urgent: '⚡ Urgent', idea: '💡 Idea' };
+const COLORS = ['pink','yellow','green','purple','blue','orange','teal','red'];
+const COLOR_HEX = { pink:'#FF6B9D', yellow:'#FFD93D', green:'#66BB6A', purple:'#CE93D8', blue:'#64B5F6', orange:'#FFB74D', teal:'#4DB6AC', red:'#EF5350' };
 
-const TAG_OPTIONS = [
-  { id: 'work', label: '💼 Work' },
-  { id: 'personal', label: '💖 Personal' },
-  { id: 'content', label: '🎬 Content' },
-  { id: 'store', label: '🛍️ Store' },
-  { id: 'meeting', label: '📅 Meeting' },
-  { id: 'urgent', label: '⚡ Urgent' },
-  { id: 'idea', label: '💡 Idea' }
-];
+const STORAGE_KEY = 'nagham-garden';
 
-const PRIORITIES = [
-  { id: 'low', label: '🟢 Low' },
-  { id: 'medium', label: '🟡 Medium' },
-  { id: 'high', label: '🔴 High' }
-];
-
-// ========== STATE ==========
+// ===== STATE =====
 let state = loadState();
-let draggedCard = null;
-let draggedCardElement = null;
-let dragSourceBoard = null;
-let confirmCallback = null;
-let focusTrapHandler = null;
-
-// ========== LOCAL STORAGE ==========
-const STORAGE_KEY = 'nagham-productivity-garden';
+let activeBoardId = state.boards[0]?.id || null;
+let confirmCb = null;
+let focusHandler = null;
 
 function loadState() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.boards && Array.isArray(parsed.boards)) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to load state, using defaults');
-  }
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) { const p = JSON.parse(s); if (p?.boards?.length) return p; }
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DATA));
 }
 
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.warn('Failed to save state');
-  }
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
+
+function uid() { return '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function esc(t) { if(!t)return ''; const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+// ===== TOAST =====
+function toast(msg, type='') {
+  const c = document.getElementById('toastC');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' '+type : '');
+  t.innerHTML = '<i class="fa-regular fa-circle-'+ (type==='ok'?'check':type==='err'?'xmark':'info') +'"></i> ' + msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
 }
 
-// ========== ID GENERATION ==========
-function generateId() {
-  return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
+// ===== RENDER SIDEBAR =====
+function renderSidebar() {
+  const list = document.getElementById('boardList');
+  list.innerHTML = state.boards.map(b => `
+    <button class="board-item${b.id === activeBoardId ? ' active' : ''}" onclick="switchBoard('${b.id}')">
+      <span class="board-item-icon" style="background:${COLOR_HEX[b.color]}22">${b.icon}</span>
+      <span class="board-item-text">${esc(b.title)}</span>
+      <span class="board-item-count">${b.cards.length}</span>
+    </button>
+  `).join('');
 }
 
-// ========== TOAST ==========
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<i class="fa-regular ${icons[type] || icons.info}"></i> ${message}`;
-  container.appendChild(toast);
-  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
+// ===== SWITCH BOARD =====
+function switchBoard(id) {
+  activeBoardId = id;
+  renderSidebar();
+  renderMain();
 }
 
-// ========== STATS ==========
-function updateStats() {
-  let totalTasks = 0;
-  let completed = 0;
-  state.boards.forEach(b => {
-    totalTasks += b.cards.length;
-    completed += b.cards.filter(c => c.done).length;
-  });
+// ===== RENDER MAIN =====
+function renderMain() {
+  const board = state.boards.find(b => b.id === activeBoardId);
+  if (!board) { document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🌻</div><div class="empty-state-text">Create a board to get started!</div></div>'; return; }
 
-  document.getElementById('totalBoards').textContent = state.boards.length;
-  document.getElementById('totalTasks').textContent = totalTasks;
-  document.getElementById('completedTasks').textContent = completed;
-  document.getElementById('totalBoardsMobile').textContent = state.boards.length;
-  document.getElementById('totalTasksMobile').textContent = `${completed}/${totalTasks}`;
-}
+  const total = board.cards.length;
+  const done = board.cards.filter(c => c.done).length;
 
-// ========== UTILITY ==========
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// ========== RENDER ==========
-function render() {
-  const container = document.getElementById('boardsContainer');
-  container.innerHTML = '';
-
-  state.boards.forEach((board, boardIndex) => {
-    const boardEl = document.createElement('div');
-    boardEl.className = 'board';
-    boardEl.dataset.boardId = board.id;
-    boardEl.dataset.color = board.color;
-    boardEl.style.animationDelay = `${boardIndex * 0.08}s`;
-
-    // Board Header
-    const header = document.createElement('div');
-    header.className = 'board-header';
-    header.innerHTML = `
-      <div class="board-header-left">
-        <div class="board-icon color-${board.color}">${board.icon || '📋'}</div>
-        <div class="board-title-group">
-          <div class="board-title" title="${escapeHtml(board.title)}">${escapeHtml(board.title)}</div>
-          <div class="board-card-count">${board.cards.length} ${board.cards.length === 1 ? 'task' : 'tasks'}</div>
+  document.getElementById('mainContent').innerHTML = `
+    <div class="main-header">
+      <div class="main-header-left">
+        <div class="main-board-icon" style="background:${COLOR_HEX[board.color]}22">${board.icon}</div>
+        <div>
+          <div class="main-board-name">${esc(board.title)}</div>
+          <div class="main-board-stats">${total} tasks · ${done} done</div>
         </div>
       </div>
-      <div class="board-actions">
-        <button class="card-action-btn" onclick="openEditBoardModal('${board.id}')" title="Edit Board">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button class="card-action-btn delete" onclick="confirmDeleteBoard('${board.id}')" title="Delete Board">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
+      <div class="main-header-actions">
+        <button class="btn btn-pink btn-sm" onclick="addCard()"><i class="fa-solid fa-plus"></i> Add Task</button>
+        <button class="btn btn-ghost btn-sm" onclick="editBoard()"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="delBoard()"><i class="fa-solid fa-trash-can"></i></button>
       </div>
-    `;
-    boardEl.appendChild(header);
-
-    // Cards List
-    const cardsList = document.createElement('div');
-    cardsList.className = 'cards-list';
-    cardsList.dataset.boardId = board.id;
-
-    cardsList.addEventListener('dragover', onDragOver);
-    cardsList.addEventListener('dragenter', onDragEnter);
-    cardsList.addEventListener('dragleave', onDragLeave);
-    cardsList.addEventListener('drop', onDrop);
-
-    if (board.cards.length === 0) {
-      cardsList.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">🌱</div>
-          <div class="empty-state-text">Your garden is growing...<br>Add your first task! 🌻</div>
-        </div>
-      `;
-    } else {
-      board.cards.forEach((card, cardIndex) => {
-        const cardEl = createCardElement(card, board.id);
-        cardEl.style.animationDelay = `${cardIndex * 0.06}s`;
-        cardsList.appendChild(cardEl);
-      });
-    }
-
-    boardEl.appendChild(cardsList);
-
-    // Add Card Button
-    const addBtn = document.createElement('button');
-    addBtn.className = 'add-card-btn';
-    addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Task';
-    addBtn.onclick = () => openAddCardModal(board.id);
-    boardEl.appendChild(addBtn);
-
-    container.appendChild(boardEl);
-  });
-
-  updateStats();
-}
-
-// ========== CREATE CARD ELEMENT ==========
-function createCardElement(card, boardId) {
-  const cardEl = document.createElement('div');
-  cardEl.className = `card ${card.done ? 'card-completed' : ''}`;
-  cardEl.dataset.cardId = card.id;
-  cardEl.dataset.boardId = boardId;
-  cardEl.draggable = true;
-
-  cardEl.addEventListener('dragstart', onDragStart);
-  cardEl.addEventListener('dragend', onDragEnd);
-
-  const tagsHtml = card.tags && card.tags.length > 0
-    ? `<div class="card-tags">${card.tags.map(t => `<span class="card-tag ${t}">${TAG_OPTIONS.find(o => o.id === t)?.label || t}</span>`).join('')}</div>`
-    : '';
-
-  const priorityHtml = card.priority && card.priority !== 'low'
-    ? `<div class="card-priority ${card.priority}"></div>`
-    : '';
-
-  cardEl.innerHTML = `
-    ${priorityHtml}
-    <div class="card-top">
-      <div class="card-title">${escapeHtml(card.title)}</div>
-      <div class="card-checkbox ${card.done ? 'checked' : ''}" onclick="toggleCardDone('${boardId}', '${card.id}')"></div>
     </div>
-    ${card.description ? `<div class="card-description">${escapeHtml(card.description)}</div>` : ''}
-    ${tagsHtml}
-    <div class="card-footer">
-      <div class="card-actions-group">
-        <button class="card-action-btn" onclick="openEditCardModal('${boardId}', '${card.id}')" title="Edit">
-          <i class="fa-regular fa-pen-to-square"></i>
-        </button>
-        <button class="card-action-btn delete" onclick="confirmDeleteCard('${boardId}', '${card.id}')" title="Delete">
-          <i class="fa-regular fa-trash-can"></i>
-        </button>
+    <div class="cards-area">
+      <div class="cards-grid" id="cardsGrid">
+        ${board.cards.length === 0 ? `
+          <div class="empty-state">
+            <div class="empty-state-icon">🌱</div>
+            <div class="empty-state-text">No tasks yet!</div>
+            <div class="empty-state-sub">Click "Add Task" to get started 🌻</div>
+          </div>
+        ` : board.cards.map((c, i) => cardHTML(c, board.id, i)).join('')}
       </div>
-      ${card.priority && card.priority !== 'low' ? `<span style="font-size:11px;color:var(--plum-muted)">${card.priority === 'high' ? '🔴' : '🟡'} ${card.priority}</span>` : ''}
     </div>
   `;
 
-  return cardEl;
 }
 
-// ========== DESKTOP DRAG & DROP ==========
-function onDragStart(e) {
-  const cardEl = e.target.closest('.card');
-  if (!cardEl) return;
-  draggedCard = cardEl.dataset.cardId;
-  draggedCardElement = cardEl;
-  dragSourceBoard = cardEl.dataset.boardId;
-
-  cardEl.classList.add('dragging');
-
-  const ghost = cardEl.cloneNode(true);
-  ghost.className = 'card drag-ghost';
-  ghost.style.width = cardEl.offsetWidth + 'px';
-  document.body.appendChild(ghost);
-  e.dataTransfer.setDragImage(ghost, 0, 0);
-  e.dataTransfer.effectAllowed = 'move';
-
-  setTimeout(() => { if (ghost.parentNode) ghost.remove(); }, 100);
-
-  document.querySelectorAll('.cards-list').forEach(el => {
-    if (el.dataset.boardId !== dragSourceBoard) {
-      el.classList.add('drag-over');
-    }
-  });
+function cardHTML(c, boardId, idx) {
+  const tags = c.tags?.length ? c.tags.map(t => `<span class="card-tag ${t}">${TAG_LABELS[t]||t}</span>`).join('') : '';
+  const prio = c.prio === 'high' ? '🔴 High' : c.prio === 'med' ? '🟡 Med' : '';
+  return `
+    <div class="card${c.done ? ' done' : ''}" style="animation-delay:${idx*0.05}s" onclick="editCard('${boardId}','${c.id}')">
+      <div class="card-check${c.done?' done':''}" onclick="event.stopPropagation();toggleDone('${boardId}','${c.id}')"></div>
+      <div class="card-body">
+        <div class="card-title">${esc(c.title)}</div>
+        ${c.desc ? `<div class="card-desc">${esc(c.desc)}</div>` : ''}
+        <div class="card-meta">
+          ${tags}
+          ${prio ? `<span class="card-priority">${prio}</span>` : ''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="card-action-btn" onclick="event.stopPropagation();editCard('${boardId}','${c.id}')" title="Edit"><i class="fa-regular fa-pen-to-square"></i></button>
+        <button class="card-action-btn del" onclick="event.stopPropagation();delCard('${boardId}','${c.id}')" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
+      </div>
+    </div>
+  `;
 }
 
-function onDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
+// ===== TOGGLE DONE =====
+function toggleDone(boardId, cardId) {
+  const b = state.boards.find(x => x.id === boardId);
+  if (!b) return;
+  const c = b.cards.find(x => x.id === cardId);
+  if (!c) return;
+  c.done = !c.done;
+  save();
+  renderMain();
+  if (c.done) toast("✨ Task done!", 'ok');
 }
 
-function onDragEnter(e) {
-  e.preventDefault();
-  const list = e.target.closest('.cards-list');
-  if (list) list.classList.add('drag-over-active');
-}
-
-function onDragLeave(e) {
-  const list = e.target.closest('.cards-list');
-  if (list) list.classList.remove('drag-over-active');
-}
-
-function onDrop(e) {
-  e.preventDefault();
-  const targetList = e.target.closest('.cards-list');
-  if (!targetList) return;
-
-  const targetBoardId = targetList.dataset.boardId;
-  document.querySelectorAll('.cards-list').forEach(el => {
-    el.classList.remove('drag-over', 'drag-over-active');
-  });
-
-  if (!draggedCard || !dragSourceBoard) return;
-
-  if (dragSourceBoard !== targetBoardId) {
-    moveCard(dragSourceBoard, draggedCard, targetBoardId);
-  }
-
-  draggedCard = null;
-  draggedCardElement = null;
-  dragSourceBoard = null;
-}
-
-function onDragEnd(e) {
-  const cardEl = e.target.closest('.card');
-  if (cardEl) cardEl.classList.remove('dragging');
-
-  document.querySelectorAll('.cards-list').forEach(el => {
-    el.classList.remove('drag-over', 'drag-over-active');
-  });
-
-  document.querySelectorAll('.drag-ghost').forEach(el => el.remove());
-
-  draggedCard = null;
-  draggedCardElement = null;
-  dragSourceBoard = null;
-}
-
-function moveCard(fromBoardId, cardId, toBoardId) {
-  const fromBoard = state.boards.find(b => b.id === fromBoardId);
-  const toBoard = state.boards.find(b => b.id === toBoardId);
-  if (!fromBoard || !toBoard) return;
-
-  const cardIndex = fromBoard.cards.findIndex(c => c.id === cardId);
-  if (cardIndex === -1) return;
-
-  const [card] = fromBoard.cards.splice(cardIndex, 1);
-  toBoard.cards.push(card);
-
-  saveState();
-  render();
-  showToast(`Moved to "${toBoard.title}" 🌻`, 'success');
-}
-
-// ========== TOUCH DRAG & DROP ==========
-let touchCard = null;
-let touchBoard = null;
-let touchTimer = null;
-let isDragging = false;
-let touchGhost = null;
-let touchStartY = 0;
-let touchStartX = 0;
-let longPressTriggered = false;
-
-document.addEventListener('touchstart', (e) => {
-  const cardEl = e.target.closest('.card');
-  if (!cardEl || cardEl.closest('.modal-overlay')?.classList.contains('active')) return;
-  if (e.target.closest('.card-action-btn, .card-checkbox')) return;
-
-  const touch = e.touches[0];
-  touchStartX = touch.clientX;
-  touchStartY = touch.clientY;
-  longPressTriggered = false;
-
-  touchCard = cardEl.dataset.cardId;
-  touchBoard = cardEl.dataset.boardId;
-
-  touchTimer = setTimeout(() => {
-    longPressTriggered = true;
-    isDragging = true;
-
-    touchGhost = cardEl.cloneNode(true);
-    touchGhost.className = 'card drag-ghost';
-    touchGhost.style.width = cardEl.offsetWidth + 'px';
-    touchGhost.style.position = 'fixed';
-    touchGhost.style.left = (touch.clientX - cardEl.offsetWidth / 2) + 'px';
-    touchGhost.style.top = (touch.clientY - 60) + 'px';
-    touchGhost.style.pointerEvents = 'none';
-    touchGhost.style.zIndex = '9999';
-    document.body.appendChild(touchGhost);
-
-    cardEl.style.opacity = '0.4';
-
-    document.querySelectorAll('.cards-list').forEach(el => {
-      if (el.dataset.boardId !== touchBoard) {
-        el.classList.add('drag-over');
-      }
-    });
-  }, 400);
-}, { passive: true });
-
-document.addEventListener('touchmove', (e) => {
-  if (!isDragging || !touchGhost) return;
-  e.preventDefault();
-
-  const touch = e.touches[0];
-  touchGhost.style.left = (touch.clientX - touchGhost.offsetWidth / 2) + 'px';
-  touchGhost.style.top = (touch.clientY - 60) + 'px';
-
-  const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-  const cardsList = dropTarget?.closest('.cards-list');
-
-  document.querySelectorAll('.cards-list').forEach(el => el.classList.remove('drag-over-active'));
-  if (cardsList && cardsList.dataset.boardId !== touchBoard) {
-    cardsList.classList.add('drag-over-active');
-  }
-}, { passive: false });
-
-document.addEventListener('touchend', (e) => {
-  clearTimeout(touchTimer);
-
-  if (isDragging && touchCard && touchBoard) {
-    const touch = e.changedTouches[0];
-    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const targetList = dropTarget?.closest('.cards-list');
-
-    if (targetList && targetList.dataset.boardId !== touchBoard) {
-      moveCard(touchBoard, touchCard, targetList.dataset.boardId);
-    } else {
-      const cardEl = document.querySelector(`.card[data-card-id="${touchCard}"]`);
-      if (cardEl) cardEl.style.opacity = '';
-    }
-  } else {
-    const cardEl = touchCard ? document.querySelector(`.card[data-card-id="${touchCard}"]`) : null;
-    if (cardEl) cardEl.style.opacity = '';
-  }
-
-  if (touchGhost && touchGhost.parentNode) touchGhost.remove();
-  document.querySelectorAll('.cards-list').forEach(el => el.classList.remove('drag-over', 'drag-over-active'));
-
-  isDragging = false;
-  touchCard = null;
-  touchBoard = null;
-  touchGhost = null;
-  longPressTriggered = false;
-}, { passive: true });
-
-document.addEventListener('touchcancel', () => {
-  clearTimeout(touchTimer);
-  if (touchGhost && touchGhost.parentNode) touchGhost.remove();
-  document.querySelectorAll('.cards-list').forEach(el => el.classList.remove('drag-over', 'drag-over-active'));
-
-  const cardEl = touchCard ? document.querySelector(`.card[data-card-id="${touchCard}"]`) : null;
-  if (cardEl) cardEl.style.opacity = '';
-
-  isDragging = false;
-  touchCard = null;
-  touchBoard = null;
-  touchGhost = null;
-  longPressTriggered = false;
-}, { passive: true });
-
-// ========== CARD OPERATIONS ==========
-function toggleCardDone(boardId, cardId) {
-  const board = state.boards.find(b => b.id === boardId);
+// ===== ADD CARD =====
+function addCard() {
+  const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-  const card = board.cards.find(c => c.id === cardId);
-  if (!card) return;
-  card.done = !card.done;
-  saveState();
-  render();
-  if (card.done) showToast("✨ Task completed! You're amazing!", 'success');
-}
 
-function getActiveBoardId() {
-  return state.boards.length > 0 ? state.boards[0].id : null;
-}
-
-function safeOpenAddCardModal(boardId) {
-  if (!boardId) {
-    showToast('Create a board first! 🌻', 'info');
-    return;
-  }
-  openAddCardModal(boardId);
-}
-
-function openAddCardModal(boardId) {
-  const tagOptionsHtml = TAG_OPTIONS.map(t =>
-    `<button type="button" class="form-tag-option" data-tag="${t.id}" onclick="toggleTagOption(this)">${t.label}</button>`
-  ).join('');
-
-  const priorityOptionsHtml = PRIORITIES.map(p =>
-    `<button type="button" class="form-priority-option ${p.id === 'medium' ? 'selected' : ''}" data-priority="${p.id}" onclick="togglePriorityOption(this)">${p.label}</button>`
-  ).join('');
-
-  const boardOptions = state.boards.map(b =>
-    `<option value="${b.id}" ${b.id === boardId ? 'selected' : ''}>${b.title}</option>`
+  const tagsHTML = Object.entries(TAG_LABELS).map(([k,v]) =>
+    `<button class="form-tag" data-t="${k}" onclick="togTag(this)">${v}</button>`
   ).join('');
 
   showModal(`
-    <div class="modal-header">
-      <h2 class="modal-title">🌻 New Task</h2>
+    <div class="modal-h">
+      <div class="modal-h-title">🌻 New Task</div>
       <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-rectangle"></i> Board</label>
-        <select class="form-select" id="cardBoardSelect">${boardOptions}</select>
+    <div class="modal-b">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-heading"></i> Title</label>
+        <input class="form-i" id="inpTitle" placeholder="What needs to be done?">
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-heading"></i> Task Title</label>
-        <input class="form-input" type="text" id="cardTitleInput" placeholder="What needs to be done?">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-align-left"></i> Description</label>
+        <textarea class="form-t" id="inpDesc" placeholder="Add details..."></textarea>
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-align-left"></i> Description <span style="color:var(--plum-muted);font-weight:400;font-size:12px">(optional)</span></label>
-        <textarea class="form-textarea" id="cardDescInput" placeholder="Add details, notes, or a to-do list..."></textarea>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-tags"></i> Tags</label>
+        <div class="form-tags">${tagsHTML}</div>
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-tags"></i> Tags</label>
-        <div class="form-tags-container" id="cardTagsContainer">${tagOptionsHtml}</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-flag"></i> Priority</label>
-        <div class="form-priority-group">${priorityOptionsHtml}</div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-flag"></i> Priority</label>
+        <div class="form-prios">
+          <button class="form-prio" data-p="low" onclick="togPrio(this)">🟢 Low</button>
+          <button class="form-prio sel medium" data-p="medium" onclick="togPrio(this)">🟡 Medium</button>
+          <button class="form-prio" data-p="high" onclick="togPrio(this)">🔴 High</button>
+        </div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="addCardFromForm()">✨ Add Task</button>
+      <button class="btn btn-pink" onclick="saveNewCard()">✨ Add</button>
     </div>
   `);
+  setTimeout(() => document.getElementById('inpTitle')?.focus(), 100);
 }
 
-function addCardFromForm() {
-  const title = document.getElementById('cardTitleInput').value.trim();
-  if (!title) {
-    document.getElementById('cardTitleInput').focus();
-    document.getElementById('cardTitleInput').style.borderColor = '#FF4757';
-    showToast('Please enter a task title!', 'error');
-    return;
-  }
+function saveNewCard() {
+  const title = document.getElementById('inpTitle').value.trim();
+  if (!title) { toast('Please enter a title!', 'err'); return; }
 
-  const boardId = document.getElementById('cardBoardSelect').value;
-  const description = document.getElementById('cardDescInput').value.trim();
-  const selectedTags = [...document.querySelectorAll('#cardTagsContainer .form-tag-option.selected')].map(el => el.dataset.tag);
-  const selectedPriority = document.querySelector('.form-priority-option.selected')?.dataset.priority || 'medium';
-
-  const board = state.boards.find(b => b.id === boardId);
+  const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
 
-  const card = {
-    id: generateId(),
-    title,
-    description,
-    priority: selectedPriority,
-    tags: selectedTags,
-    done: false,
-    createdAt: Date.now()
-  };
+  const desc = document.getElementById('inpDesc').value.trim();
+  const tags = [...document.querySelectorAll('.form-tag.sel')].map(el => el.dataset.t);
+  const prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
 
-  board.cards.push(card);
-  saveState();
-  render();
+  board.cards.unshift({ id: uid(), title, desc, prio, tags, done: false });
+  save();
   closeModal();
-  showToast(`🌻 Added to "${board.title}"!`, 'success');
+  renderMain();
+  toast(`🌻 Added to ${board.title}!`, 'ok');
 }
 
-function openEditCardModal(boardId, cardId) {
+// ===== EDIT CARD =====
+function editCard(boardId, cardId) {
   const board = state.boards.find(b => b.id === boardId);
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
   if (!card) return;
 
-  const tagOptionsHtml = TAG_OPTIONS.map(t =>
-    `<button type="button" class="form-tag-option ${card.tags?.includes(t.id) ? 'selected' : ''}" data-tag="${t.id}" onclick="toggleTagOption(this)">${t.label}</button>`
-  ).join('');
-
-  const priorityOptionsHtml = PRIORITIES.map(p =>
-    `<button type="button" class="form-priority-option ${card.priority === p.id ? 'selected' : ''}" data-priority="${p.id}" onclick="togglePriorityOption(this)">${p.label}</button>`
+  const tagsHTML = Object.entries(TAG_LABELS).map(([k,v]) =>
+    `<button class="form-tag${card.tags?.includes(k)?' sel':''}" data-t="${k}" onclick="togTag(this)">${v}</button>`
   ).join('');
 
   showModal(`
-    <div class="modal-header">
-      <h2 class="modal-title">✏️ Edit Task</h2>
+    <div class="modal-h">
+      <div class="modal-h-title">✏️ Edit Task</div>
       <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="modal-body" id="editCardModal">
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-heading"></i> Task Title</label>
-        <input class="form-input" type="text" id="editCardTitle" value="${escapeHtml(card.title)}">
+    <div class="modal-b" id="editModal">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-heading"></i> Title</label>
+        <input class="form-i" id="editTitle" value="${esc(card.title)}">
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-align-left"></i> Description</label>
-        <textarea class="form-textarea" id="editCardDesc">${escapeHtml(card.description || '')}</textarea>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-align-left"></i> Description</label>
+        <textarea class="form-t" id="editDesc">${esc(card.desc||'')}</textarea>
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-tags"></i> Tags</label>
-        <div class="form-tags-container" id="editCardTags">${tagOptionsHtml}</div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-tags"></i> Tags</label>
+        <div class="form-tags">${tagsHTML}</div>
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-flag"></i> Priority</label>
-        <div class="form-priority-group">${priorityOptionsHtml}</div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-flag"></i> Priority</label>
+        <div class="form-prios">
+          <button class="form-prio${card.prio==='low'?' sel low':''}" data-p="low" onclick="togPrio(this)">🟢 Low</button>
+          <button class="form-prio${card.prio==='medium'?' sel medium':''}" data-p="medium" onclick="togPrio(this)">🟡 Medium</button>
+          <button class="form-prio${card.prio==='high'?' sel high':''}" data-p="high" onclick="togPrio(this)">🔴 High</button>
+        </div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEditCard('${boardId}', '${cardId}')">💾 Save Changes</button>
+      <button class="btn btn-pink" onclick="saveEdit('${boardId}','${cardId}')">💾 Save</button>
     </div>
   `);
 }
 
-function saveEditCard(boardId, cardId) {
+function saveEdit(boardId, cardId) {
   const board = state.boards.find(b => b.id === boardId);
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
   if (!card) return;
 
-  const title = document.getElementById('editCardTitle').value.trim();
-  if (!title) {
-    showToast('Task title cannot be empty!', 'error');
-    return;
-  }
+  const title = document.getElementById('editTitle').value.trim();
+  if (!title) { toast('Title cannot be empty!', 'err'); return; }
 
   card.title = title;
-  card.description = document.getElementById('editCardDesc').value.trim();
-  card.tags = [...document.querySelectorAll('#editCardTags .form-tag-option.selected')].map(el => el.dataset.tag);
-  card.priority = document.querySelector('#editCardModal .form-priority-option.selected')?.dataset.priority || 'medium';
+  card.desc = document.getElementById('editDesc').value.trim();
+  card.tags = [...document.querySelectorAll('#editModal .form-tag.sel')].map(el => el.dataset.t);
+  card.prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
 
-  saveState();
-  render();
+  save();
   closeModal();
-  showToast('✨ Task updated!', 'success');
+  renderMain();
+  toast('✨ Task updated!', 'ok');
 }
 
-function confirmDeleteCard(boardId, cardId) {
+// ===== DELETE CARD =====
+function delCard(boardId, cardId) {
   const board = state.boards.find(b => b.id === boardId);
   if (!board) return;
   const card = board.cards.find(c => c.id === cardId);
   if (!card) return;
 
-  showConfirmModal(
+  confirm(
     '🗑️',
     'Delete this task?',
-    `"${escapeHtml(card.title)}" will be removed forever.`,
+    `"${esc(card.title)}" will be removed forever.`,
     () => {
       board.cards = board.cards.filter(c => c.id !== cardId);
-      saveState();
-      render();
+      save();
       closeModal();
-      showToast('Task deleted', 'info');
+      renderMain();
+      toast('Task deleted');
     }
   );
 }
 
-// ========== BOARD OPERATIONS ==========
-function openAddBoardModal() {
-  const colorOptionsHtml = COLORS.map(c =>
-    `<div class="color-option" style="background:${c.hex}" data-color="${c.name}" onclick="selectColor(this)"></div>`
-  ).join('');
-
-  showModal(`
-    <div class="modal-header">
-      <h2 class="modal-title">🌻 New Board</h2>
-      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-heading"></i> Board Name</label>
-        <input class="form-input" type="text" id="newBoardName" placeholder="e.g., New Project">
-      </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-face-smile"></i> Icon <span style="color:var(--plum-muted);font-weight:400;font-size:12px">(emoji)</span></label>
-        <input class="form-input" type="text" id="newBoardIcon" value="📋" placeholder="📋" maxlength="2">
-      </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-palette"></i> Color</label>
-        <div class="color-picker" id="colorPicker">
-          ${colorOptionsHtml}
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="addBoard()">✨ Create Board</button>
-    </div>
-  `);
-
-  const firstColor = document.querySelector('.color-option');
-  if (firstColor) firstColor.classList.add('selected');
-}
-
+// ===== BOARD CRUD =====
 function addBoard() {
-  const name = document.getElementById('newBoardName').value.trim();
-  if (!name) {
-    showToast('Please enter a board name!', 'error');
-    return;
-  }
-
-  const icon = document.getElementById('newBoardIcon').value.trim() || '📋';
-  const color = document.querySelector('.color-option.selected')?.dataset.color || 'pink';
-
-  state.boards.push({
-    id: generateId(),
-    title: name,
-    icon,
-    color,
-    cards: []
-  });
-
-  saveState();
-  render();
-  closeModal();
-  showToast(`🌻 "${name}" board created!`, 'success');
-}
-
-function openEditBoardModal(boardId) {
-  const board = state.boards.find(b => b.id === boardId);
-  if (!board) return;
-
-  const colorOptionsHtml = COLORS.map(c =>
-    `<div class="color-option ${board.color === c.name ? 'selected' : ''}" style="background:${c.hex}" data-color="${c.name}" onclick="selectColor(this)"></div>`
+  const colorsHTML = COLORS.map(c =>
+    `<div class="color-opt" style="background:${COLOR_HEX[c]}" data-c="${c}" onclick="selCol(this)"></div>`
   ).join('');
 
   showModal(`
-    <div class="modal-header">
-      <h2 class="modal-title">✏️ Edit Board</h2>
+    <div class="modal-h">
+      <div class="modal-h-title">🌻 New Board</div>
       <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-heading"></i> Board Name</label>
-        <input class="form-input" type="text" id="editBoardName" value="${escapeHtml(board.title)}">
+    <div class="modal-b">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-heading"></i> Name</label>
+        <input class="form-i" id="newBoardName" placeholder="e.g., New Project">
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-face-smile"></i> Icon</label>
-        <input class="form-input" type="text" id="editBoardIcon" value="${board.icon || '📋'}" maxlength="2">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-face-smile"></i> Icon</label>
+        <input class="form-i" id="newBoardIcon" value="📋" maxlength="2">
       </div>
-      <div class="form-group">
-        <label class="form-label"><i class="fa-regular fa-palette"></i> Color</label>
-        <div class="color-picker" id="editColorPicker">
-          ${colorOptionsHtml}
-        </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-palette"></i> Color</label>
+        <div class="color-picker">${colorsHTML}</div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-f">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEditBoard('${boardId}')">💾 Save Changes</button>
+      <button class="btn btn-pink" onclick="saveNewBoard()">✨ Create</button>
+    </div>
+  `);
+  document.querySelector('.color-opt')?.classList.add('sel');
+}
+
+function saveNewBoard() {
+  const name = document.getElementById('newBoardName').value.trim();
+  if (!name) { toast('Please enter a name!', 'err'); return; }
+  const icon = document.getElementById('newBoardIcon').value.trim() || '📋';
+  const color = document.querySelector('.color-opt.sel')?.dataset.c || 'pink';
+
+  const b = { id: uid(), title: name, icon, color, cards: [] };
+  state.boards.push(b);
+  save();
+  closeModal();
+  activeBoardId = b.id;
+  renderSidebar();
+  renderMain();
+  toast(`🌻 "${name}" board created!`, 'ok');
+}
+
+function editBoard() {
+  const board = state.boards.find(b => b.id === activeBoardId);
+  if (!board) return;
+
+  const colorsHTML = COLORS.map(c =>
+    `<div class="color-opt${board.color===c?' sel':''}" style="background:${COLOR_HEX[c]}" data-c="${c}" onclick="selCol(this)"></div>`
+  ).join('');
+
+  showModal(`
+    <div class="modal-h">
+      <div class="modal-h-title">✏️ Edit Board</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-b">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-heading"></i> Name</label>
+        <input class="form-i" id="editBoardName" value="${esc(board.title)}">
+      </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-face-smile"></i> Icon</label>
+        <input class="form-i" id="editBoardIcon" value="${board.icon}" maxlength="2">
+      </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-palette"></i> Color</label>
+        <div class="color-picker">${colorsHTML}</div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-pink" onclick="saveEditBoard()">💾 Save</button>
     </div>
   `);
 }
 
-function saveEditBoard(boardId) {
-  const board = state.boards.find(b => b.id === boardId);
+function saveEditBoard() {
+  const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-
   const name = document.getElementById('editBoardName').value.trim();
-  if (!name) {
-    showToast('Board name cannot be empty!', 'error');
-    return;
-  }
-
+  if (!name) { toast('Name cannot be empty!', 'err'); return; }
   board.title = name;
   board.icon = document.getElementById('editBoardIcon').value.trim() || '📋';
-  board.color = document.querySelector('#editColorPicker .color-option.selected')?.dataset.color || board.color;
-
-  saveState();
-  render();
+  board.color = document.querySelector('.color-picker .color-opt.sel')?.dataset.c || board.color;
+  save();
   closeModal();
-  showToast('✨ Board updated!', 'success');
+  renderSidebar();
+  renderMain();
+  toast('✨ Board updated!', 'ok');
 }
 
-function confirmDeleteBoard(boardId) {
-  const board = state.boards.find(b => b.id === boardId);
+function delBoard() {
+  const board = state.boards.find(b => b.id === activeBoardId);
   if (!board) return;
-
-  showConfirmModal(
-    '🗑️',
-    'Delete this board?',
-    `"${escapeHtml(board.title)}" and all its ${board.cards.length} tasks will be lost forever.`,
-    () => {
-      state.boards = state.boards.filter(b => b.id !== boardId);
-      saveState();
-      render();
-      closeModal();
-      showToast('Board deleted', 'info');
-    }
-  );
+  confirm('🗑️', 'Delete this board?', `"${esc(board.title)}" and its ${board.cards.length} tasks will be lost.`, () => {
+    state.boards = state.boards.filter(b => b.id !== activeBoardId);
+    activeBoardId = state.boards[0]?.id || null;
+    save();
+    closeModal();
+    renderSidebar();
+    renderMain();
+    toast('Board deleted');
+  });
 }
 
-// ========== MODAL ==========
+// ===== MODAL =====
 function showModal(html) {
-  const overlay = document.getElementById('modalOverlay');
-  const content = document.getElementById('modalContent');
-  content.innerHTML = html;
-  overlay.classList.add('active');
+  const o = document.getElementById('modalOverlay');
+  document.getElementById('modalContent').innerHTML = html;
+  o.classList.add('active');
   document.body.style.overflow = 'hidden';
-
-  trapFocus(overlay);
-
-  setTimeout(() => {
-    const firstInput = content.querySelector('input:not([type="file"]):not([type="hidden"]), textarea, select, button:not(.modal-close)');
-    if (firstInput) firstInput.focus();
-  }, 150);
+  trapFocus(o);
 }
 
 function closeModal() {
-  const overlay = document.getElementById('modalOverlay');
-  overlay.classList.remove('active');
+  document.getElementById('modalOverlay').classList.remove('active');
   document.body.style.overflow = '';
-  releaseFocusTrap();
+  releaseFocus();
 }
 
-// ========== FOCUS TRAP ==========
-function trapFocus(container) {
-  if (focusTrapHandler) {
-    document.removeEventListener('keydown', focusTrapHandler);
-    focusTrapHandler = null;
-  }
-
-  const focusable = container.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
-  if (focusable.length === 0) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-
+// ===== FOCUS TRAP =====
+function trapFocus(c) {
+  if (focusHandler) { document.removeEventListener('keydown', focusHandler); focusHandler = null; }
+  const f = c.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  if (!f.length) return;
+  const first = f[0], last = f[f.length-1];
   setTimeout(() => first.focus(), 50);
-
-  focusTrapHandler = function(e) {
+  focusHandler = function(e) {
     if (e.key !== 'Tab') return;
-    const modal = document.getElementById('modalOverlay');
-    if (!modal.classList.contains('active')) return;
-
-    if (e.shiftKey) {
-      if (document.activeElement === first || !modal.contains(document.activeElement)) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last || !modal.contains(document.activeElement)) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
+    if (!document.getElementById('modalOverlay').classList.contains('active')) return;
+    if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+    else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
   };
-
-  document.addEventListener('keydown', focusTrapHandler);
+  document.addEventListener('keydown', focusHandler);
 }
 
-function releaseFocusTrap() {
-  if (focusTrapHandler) {
-    document.removeEventListener('keydown', focusTrapHandler);
-    focusTrapHandler = null;
-  }
+function releaseFocus() {
+  if (focusHandler) { document.removeEventListener('keydown', focusHandler); focusHandler = null; }
 }
 
-// ========== MODAL HELPERS ==========
-function toggleTagOption(el) {
-  el.classList.toggle('selected');
-}
+// ===== MODAL HELPERS =====
+function togTag(el) { el.classList.toggle('sel'); }
+function togPrio(el) { el.parentElement.querySelectorAll('.form-prio').forEach(e => e.classList.remove('sel','high','medium','low')); el.classList.add('sel',el.dataset.p); }
+function selCol(el) { el.parentElement.querySelectorAll('.color-opt').forEach(e => e.classList.remove('sel')); el.classList.add('sel'); }
 
-function togglePriorityOption(el) {
-  const container = el.parentElement;
-  container.querySelectorAll('.form-priority-option').forEach(e => e.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
-function selectColor(el) {
-  const container = el.parentElement;
-  container.querySelectorAll('.color-option').forEach(e => e.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
-// ========== CONFIRM DIALOG ==========
-function showConfirmModal(icon, title, text, callback) {
+// ===== CONFIRM =====
+function confirm(icon, title, text, cb) {
   showModal(`
-    <div class="confirm-dialog">
-      <div class="modal-body">
+    <div class="confirm">
+      <div class="modal-b">
         <div class="confirm-icon">${icon}</div>
         <div class="confirm-title">${title}</div>
         <div class="confirm-text">${text}</div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-f">
         <button class="btn btn-ghost" onclick="cancelConfirm()">Cancel</button>
-        <button class="btn btn-danger" onclick="executeConfirm()">Yes, Delete</button>
+        <button class="btn btn-danger" onclick="execConfirm()">Delete</button>
       </div>
     </div>
   `);
-  confirmCallback = callback;
+  confirmCb = cb;
 }
+function execConfirm() { if (confirmCb) confirmCb(); confirmCb = null; }
+function cancelConfirm() { confirmCb = null; closeModal(); }
 
-function executeConfirm() {
-  if (confirmCallback) confirmCallback();
-  confirmCallback = null;
-}
-
-function cancelConfirm() {
-  confirmCallback = null;
-  closeModal();
-}
-
-// ========== IMPORT/EXPORT ==========
-function openImportExport() {
-  const menu = document.getElementById('importExportMenu');
-  menu.classList.toggle('active');
-}
-
-// Close import/export menu on outside click
-document.addEventListener('click', (e) => {
-  const menu = document.getElementById('importExportMenu');
-  const btn = document.getElementById('importExportBtn');
-  if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
-    menu.classList.remove('active');
-  }
-});
-
-function exportData() {
-  const dataStr = JSON.stringify(state, null, 2);
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `nagham-garden-backup-${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  document.getElementById('importExportMenu').classList.remove('active');
-  showToast('📦 Backup downloaded!', 'success');
-}
-
-function importData(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!data.boards || !Array.isArray(data.boards)) {
-        showToast('Invalid backup file!', 'error');
-        return;
-      }
-
-      showConfirmModal(
-        '📥',
-        'Import backup?',
-        `This will replace all current boards with ${data.boards.length} boards from the backup.`,
-        () => {
-          state = data;
-          saveState();
-          render();
-          closeModal();
-          document.getElementById('importExportMenu').classList.remove('active');
-          showToast('✅ Backup restored successfully!', 'success');
-        }
-      );
-    } catch (err) {
-      showToast('Could not read file. Make sure it\'s a valid JSON backup.', 'error');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-function resetAllData() {
-  document.getElementById('importExportMenu').classList.remove('active');
-  showConfirmModal(
-    '⚠️',
-    'Reset all data?',
-    'This will delete ALL boards and tasks and restore the defaults. This cannot be undone!',
-    () => {
-      state = JSON.parse(JSON.stringify(DEFAULT_DATA));
-      saveState();
-      render();
-      closeModal();
-      showToast('🔄 Data reset to defaults', 'info');
-    }
-  );
-}
-
-// ========== KEYBOARD SHORTCUTS ==========
-document.addEventListener('keydown', (e) => {
-  // Close modal on Escape
-  if (e.key === 'Escape') {
-    closeModal();
-    return;
-  }
-
-  // Enter in modal form submits
+// ===== KEYBOARD =====
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
   if (e.key === 'Enter') {
-    const modal = document.getElementById('modalOverlay');
-    if (modal.classList.contains('active')) {
-      const activeEl = document.activeElement;
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
-        const submitBtn = modal.querySelector('.modal-footer .btn-primary');
-        if (submitBtn) submitBtn.click();
+    const o = document.getElementById('modalOverlay');
+    if (o.classList.contains('active')) {
+      const a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) {
+        const btn = o.querySelector('.modal-f .btn-pink');
+        if (btn) btn.click();
       }
     }
   }
-
-  // Ctrl/Cmd + K = New Task
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault();
-    safeOpenAddCardModal(getActiveBoardId());
-  }
-
-  // Ctrl/Cmd + Shift + N = New Board
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'n' || e.key === 'N')) {
-    e.preventDefault();
-    openAddBoardModal();
-  }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'k') { e.preventDefault(); addCard(); }
 });
 
-// Close modal on overlay click
-document.getElementById('modalOverlay').addEventListener('click', (e) => {
+document.getElementById('modalOverlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeModal();
 });
 
-// ========== INIT ==========
-render();
-showToast('🌻 Welcome, Nagham! Let\'s grow your garden!', 'success');
+// ===== INIT =====
+renderSidebar();
+renderMain();
+toast('🌻 Welcome, Nagham!', 'ok');
