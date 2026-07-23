@@ -1208,17 +1208,13 @@ function addChecklistItem(inputId, listId) {
   const list = document.getElementById(listId);
   if (!list) return;
   const id = uid();
-  list.insertAdjacentHTML('beforeend', checklistItemHTML(id, text, listId));
-  input.value = '';
-  input.focus();
-}
-
-function checklistItemHTML(id, text, listId) {
-  return `<div class="cl-item" data-cl-id="${id}">
-    <div class="cl-check${false ? ' done' : ''}" onclick="toggleClItem(this)"></div>
+  list.insertAdjacentHTML('beforeend', `<div class="cl-item" data-cl-id="${id}">
+    <div class="cl-check" onclick="toggleClItem(this)"></div>
     <span class="cl-text">${esc(text)}</span>
     <button class="cl-remove" onclick="removeClItem(this)" title="Remove"><i class="fa-solid fa-xmark"></i></button>
-  </div>`;
+  </div>`);
+  input.value = '';
+  input.focus();
 }
 
 function toggleClItem(el) {
