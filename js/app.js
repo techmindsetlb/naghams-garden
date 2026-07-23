@@ -538,6 +538,7 @@ function cardHTML(c, boardId, idx) {
         <div class="card-title">${esc(c.title)}</div>
         ${c.desc ? `<div class="card-desc">${esc(c.desc)}</div>` : ''}
         ${c.notes && c.notes !== '<br>' ? `<div class="card-notes-preview">${c.notes}</div>` : ''}
+        ${c.checklist && c.checklist.length > 0 ? (() => { const done = c.checklist.filter(i => i.done).length; const total = c.checklist.length; return `<div class="card-checklist-progress"><i class="fa-regular fa-list-check"></i> ${done}/${total}</div>`; })() : ''}
         <div class="card-meta">
           ${tags}
           ${prio ? `<span class="card-priority">${prio}</span>` : ''}
@@ -684,6 +685,14 @@ function addCard() {
         <input class="form-i" type="date" id="inpDate">
       </div>
       <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-list-check"></i> Checklist <span style="color:var(--plum-muted);font-weight:400">(optional)</span></label>
+        <div class="cl-input-wrap">
+          <input class="form-i cl-input" id="inpClInput" placeholder="Add an item..." onkeydown="if(event.key==='Enter')addChecklistItem('inpClInput','inpClList')">
+          <button class="cl-add-btn" onclick="addChecklistItem('inpClInput','inpClList')">+</button>
+        </div>
+        <div class="cl-list" id="inpClList"></div>
+      </div>
+      <div class="form-g">
         <label class="form-l"><i class="fa-solid fa-paperclip"></i> Attachments <span style="color:var(--plum-muted);font-weight:400">(max 50MB each)</span></label>
         <div class="file-upload-zone" onclick="document.getElementById('inpFiles').click()" ondragover="this.classList.add('drag-over');event.preventDefault()" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('inpFiles').files=event.dataTransfer.files;handleFileSelect('inpFiles','inpFilePreview')">
           <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -715,7 +724,8 @@ async function saveNewCard() {
   
   const cardId = uid();
   const pendingFiles = getPendingFiles('inpFilePreview');
-  board.cards.unshift({ id: cardId, title, desc, notes, prio, tags, done: false, due, fileCount: pendingFiles.length });
+  const checklist = collectChecklist('inpClList');
+  board.cards.unshift({ id: cardId, title, desc, notes, prio, tags, done: false, due, fileCount: pendingFiles.length, checklist });
   
   // Save pending files to IndexedDB
   for (const f of pendingFiles) {
@@ -814,6 +824,14 @@ async function editCard(boardId, cardId) {
         <input class="form-i" type="date" id="editDue" value="${card.due||''}">
       </div>
       <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-list-check"></i> Checklist <span style="color:var(--plum-muted);font-weight:400">(optional)</span></label>
+        <div class="cl-input-wrap">
+          <input class="form-i cl-input" id="editClInput" placeholder="Add an item..." onkeydown="if(event.key==='Enter')addChecklistItem('editClInput','editClList')">
+          <button class="cl-add-btn" onclick="addChecklistItem('editClInput','editClList')">+</button>
+        </div>
+        <div class="cl-list" id="editClList"></div>
+      </div>
+      <div class="form-g">
         <label class="form-l"><i class="fa-solid fa-paperclip"></i> Attachments <span style="color:var(--plum-muted);font-weight:400">(max 50MB each)</span></label>
         <div class="file-upload-zone" onclick="document.getElementById('editFiles').click()" ondragover="this.classList.add('drag-over');event.preventDefault()" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('editFiles').files=event.dataTransfer.files;handleFileSelect('editFiles','editFilePreview')">
           <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -828,6 +846,8 @@ async function editCard(boardId, cardId) {
       <button class="btn btn-pink" onclick="saveEdit('${boardId}','${cardId}')">💾 Save</button>
     </div>
   `);
+  // Load existing checklist items
+  renderChecklistItems(card.checklist || [], 'editClList');
 }
 
 async function viewCardFiles(boardId, cardId) {
@@ -907,6 +927,7 @@ async function saveEdit(boardId, cardId) {
   card.tags = [...document.querySelectorAll('#editModal .form-tag.sel')].map(el => el.dataset.t);
   card.prio = document.querySelector('.form-prio.sel')?.dataset.p || 'medium';
   card.due = document.getElementById('editDue').value || null;
+  card.checklist = collectChecklist('editClList');
   
   // Save new pending files to IndexedDB
   const pendingFiles = getPendingFiles('editFilePreview');
@@ -1178,6 +1199,58 @@ function releaseFocus() {
 }
 
 function togTag(el) { el.classList.toggle('sel'); }
+
+// ===== CHECKLIST HELPERS =====
+function addChecklistItem(inputId, listId) {
+  const input = document.getElementById(inputId);
+  const text = input.value.trim();
+  if (!text) return;
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const id = uid();
+  list.insertAdjacentHTML('beforeend', checklistItemHTML(id, text, listId));
+  input.value = '';
+  input.focus();
+}
+
+function checklistItemHTML(id, text, listId) {
+  return `<div class="cl-item" data-cl-id="${id}">
+    <div class="cl-check${false ? ' done' : ''}" onclick="toggleClItem(this)"></div>
+    <span class="cl-text">${esc(text)}</span>
+    <button class="cl-remove" onclick="removeClItem(this)" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+  </div>`;
+}
+
+function toggleClItem(el) {
+  el.classList.toggle('done');
+  el.closest('.cl-item').classList.toggle('done');
+}
+
+function removeClItem(el) {
+  el.closest('.cl-item').remove();
+}
+
+function collectChecklist(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return [];
+  return Array.from(list.querySelectorAll('.cl-item')).map(el => ({
+    id: el.dataset.clId,
+    text: el.querySelector('.cl-text').textContent,
+    done: el.querySelector('.cl-check').classList.contains('done')
+  }));
+}
+
+function renderChecklistItems(items, listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  list.innerHTML = (items || []).map(item =>
+    `<div class="cl-item${item.done ? ' done' : ''}" data-cl-id="${item.id}">
+      <div class="cl-check${item.done ? ' done' : ''}" onclick="toggleClItem(this)"></div>
+      <span class="cl-text">${esc(item.text)}</span>
+      <button class="cl-remove" onclick="removeClItem(this)" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+    </div>`
+  ).join('');
+}
 function togPrio(el) { el.parentElement.querySelectorAll('.form-prio').forEach(e => e.classList.remove('sel','high','medium','low')); el.classList.add('sel',el.dataset.p); }
 function selCol(el) { el.parentElement.querySelectorAll('.color-opt').forEach(e => e.classList.remove('sel')); el.classList.add('sel'); }
 
