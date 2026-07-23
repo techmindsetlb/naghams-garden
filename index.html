@@ -15,14 +15,13 @@
 <div class="app">
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-title">
-        <span>🌻</span>
-        <span class="sidebar-title-text">Nagham's Garden</span>
-      </div>
-      <div class="sidebar-sub">grow your dreams ✨</div>
+    <div class="sidebar-header" id="sidebarHeader">
+      <!-- Rendered by JS -->
     </div>
-    <div class="sidebar-label">Boards</div>
+    <div class="sidebar-label">
+      Boards
+      <button class="sidebar-settings-btn" onclick="openSettings()" title="Customize Theme"><i class="fa-solid fa-palette"></i></button>
+    </div>
     <div class="boards-list" id="boardList"></div>
     <button class="add-board-btn" onclick="addBoard()">
       <i class="fa-solid fa-plus"></i>

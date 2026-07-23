@@ -44,6 +44,42 @@ const COLORS = ['pink','yellow','green','purple','blue','orange','teal','red'];
 const COLOR_HEX = { pink:'#FF6B9D', yellow:'#FFD93D', green:'#66BB6A', purple:'#CE93D8', blue:'#64B5F6', orange:'#FFB74D', teal:'#4DB6AC', red:'#EF5350' };
 
 const STORAGE_KEY = 'nagham-garden';
+const SETTINGS_KEY = 'nagham-settings';
+
+// ===== THEMES =====
+const THEMES = {
+  sunset: { name: 'Warm Sunset', emoji: '🌅', icon: '🌻',
+    swatches: ['#FF6B9D','#FFD93D','#FFFBF0','#4A2B4D'] },
+  pastel: { name: 'Soft Pastel', emoji: '🌸', icon: '🌸',
+    swatches: ['#F8BBD0','#FFF9C4','#F3E5F5','#7B1FA2'] },
+  bold: { name: 'Bold & Modern', emoji: '✨', icon: '⭐',
+    swatches: ['#FF1493','#FFD700','#1A1A1A','#FFFFFF'] },
+  boho: { name: 'Boho Earth', emoji: '🌿', icon: '🌿',
+    swatches: ['#E07A5F','#D4A017','#F5F0E8','#5D4037'] }
+};
+
+// ===== SETTINGS =====
+let settings = loadSettings();
+
+function loadSettings() {
+  try {
+    const s = localStorage.getItem(SETTINGS_KEY);
+    if (s) { const p = JSON.parse(s); if (p.theme) return p; }
+  } catch(e) {}
+  return { theme: 'sunset', logoStyle: 'emoji-name', quote: 'grow your dreams, one task at a time ✨' };
+}
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e) {}
+}
+
+function applyTheme(themeId) {
+  document.documentElement.setAttribute('data-theme', themeId);
+  settings.theme = themeId;
+  saveSettings();
+  // Refresh sidebar header to update icon
+  renderSidebarHeader();
+}
 
 // ===== STATE =====
 let state = loadState();
@@ -75,8 +111,26 @@ function toast(msg, type='') {
   setTimeout(() => t.remove(), 3000);
 }
 
+// ===== RENDER SIDEBAR HEADER =====
+function renderSidebarHeader() {
+  const h = document.getElementById('sidebarHeader');
+  const theme = THEMES[settings.theme] || THEMES.sunset;
+  let iconHtml = '';
+  if (settings.logoStyle === 'emoji-name') iconHtml = theme.icon;
+  else if (settings.logoStyle === 'both') iconHtml = '🌻✨';
+  
+  h.innerHTML = `
+    <div class="sidebar-title">
+      ${iconHtml ? `<span>${iconHtml}</span>` : ''}
+      <span class="sidebar-title-text">Nagham's Garden</span>
+    </div>
+    <div class="sidebar-sub">${esc(settings.quote)}</div>
+  `;
+}
+
 // ===== RENDER SIDEBAR =====
 function renderSidebar() {
+  renderSidebarHeader();
   const list = document.getElementById('boardList');
   list.innerHTML = state.boards.map(b => `
     <button class="board-item${b.id === activeBoardId ? ' active' : ''}" onclick="switchBoard('${b.id}')">
@@ -458,6 +512,77 @@ function delCard(boardId, cardId) {
   );
 }
 
+// ===== SETTINGS =====
+function openSettings() {
+  const themeCards = Object.entries(THEMES).map(([id, t]) => `
+    <div class="theme-card${settings.theme === id ? ' active' : ''}" data-theme-id="${id}" onclick="selectTheme('${id}')">
+      <div class="theme-card-emoji">${t.emoji}</div>
+      <div class="theme-card-swatches">
+        ${t.swatches.map(s => `<div class="theme-card-swatch" style="background:${s}"></div>`).join('')}
+      </div>
+      <div class="theme-card-name">${t.name}</div>
+    </div>
+  `).join('');
+
+  showModal(`
+    <div class="modal-h">
+      <div class="modal-h-title">🎨 Customize</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-b">
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-palette"></i> Theme</label>
+        <div class="theme-grid">${themeCards}</div>
+      </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-face-smile"></i> Logo Style</label>
+        <div class="logo-style-grid">
+          <div class="logo-opt${settings.logoStyle==='emoji-name'?' sel':''}" onclick="selLogo(this,'emoji-name')">
+            ${THEMES[settings.theme]?.icon || '🌻'} Nagham<span class="logo-opt-label">Icon + Name</span>
+          </div>
+          <div class="logo-opt${settings.logoStyle==='text'?' sel':''}" onclick="selLogo(this,'text')">
+            📝<span class="logo-opt-label">Text Only</span>
+          </div>
+          <div class="logo-opt${settings.logoStyle==='both'?' sel':''}" onclick="selLogo(this,'both')">
+            🌻✨<span class="logo-opt-label">Both Emojis</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-g">
+        <label class="form-l"><i class="fa-regular fa-quote-right"></i> Personal Quote</label>
+        <input class="form-i" id="editQuote" value="${esc(settings.quote)}" placeholder="A special message for you...">
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-pink" onclick="saveSettingsModal()">💖 Save</button>
+    </div>
+  `);
+}
+
+function selectTheme(id) {
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.theme-card[data-theme-id="${id}"]`)?.classList.add('active');
+  // Apply theme immediately for preview
+  applyTheme(id);
+}
+
+function selLogo(el, style) {
+  document.querySelectorAll('.logo-opt').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  settings.logoStyle = style;
+  renderSidebarHeader();
+}
+
+function saveSettingsModal() {
+  const q = document.getElementById('editQuote').value.trim();
+  if (q) settings.quote = q;
+  saveSettings();
+  renderSidebarHeader();
+  closeModal();
+  toast('💖 Settings saved!', 'ok');
+}
+
 // ===== BOARD CRUD =====
 function addBoard() {
   const colorsHTML = COLORS.map(c =>
@@ -651,6 +776,7 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 });
 
 // ===== INIT =====
+applyTheme(settings.theme);
 renderSidebar();
 renderMain();
 toast('🌻 Welcome, Nagham!', 'ok');
