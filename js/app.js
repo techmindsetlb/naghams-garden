@@ -116,7 +116,10 @@ let timerState = {
   interval: null,
   growth: 0,               // 0-100%
   completed: false,
-  selectedDuration: 25 * 60
+  selectedDuration: 25 * 60,
+  showingCustom: false,
+  customMinutes: 10,
+  customActive: false
 };
 
 // ===== CALENDAR STATE =====
@@ -987,10 +990,20 @@ function renderFocus() {
       
       <div class="focus-controls">
         ${!timerState.running && !timerState.completed ? [15, 25, 45].map(d => `
-          <button class="focus-duration-btn${timerState.selectedDuration === d * 60 ? ' active' : ''}" onclick="selectDuration(${d * 60})">
+          <button class="focus-duration-btn${timerState.selectedDuration === d * 60 && !timerState.showingCustom ? ' active' : ''}" onclick="selectDuration(${d * 60})">
             ${d === 15 ? '🌱' : d === 25 ? '🌻' : '🌿'} ${d} min
           </button>
         `).join('') : ''}
+        ${!timerState.running && !timerState.completed ? `
+          <span class="focus-custom-wrap" id="focusCustomWrap">
+            ${timerState.showingCustom ? `
+              <input class="focus-custom-input" id="focusCustomInput" type="number" min="1" max="180" value="${Math.floor(timerState.customMinutes || 10)}" placeholder="min" onkeydown="if(event.key==='Enter')applyCustomDuration()">
+              <button class="focus-duration-btn active" onclick="applyCustomDuration()" title="Apply">✓</button>
+            ` : `
+              <button class="focus-duration-btn${timerState.customActive ? ' active' : ''}" onclick="showCustomDuration()">⏱️ Custom</button>
+            `}
+          </span>
+        ` : ''}
       </div>
       
       <div class="focus-controls">
@@ -1211,7 +1224,41 @@ function selectDuration(seconds) {
   timerState.remaining = seconds;
   timerState.growth = 0;
   timerState.completed = false;
+  timerState.showingCustom = false;
+  timerState.customActive = false;
   renderFocus();
+}
+
+function showCustomDuration() {
+  timerState.showingCustom = true;
+  timerState.customActive = true;
+  renderFocus();
+  setTimeout(() => {
+    const inp = document.getElementById('focusCustomInput');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 100);
+}
+
+function applyCustomDuration() {
+  const inp = document.getElementById('focusCustomInput');
+  if (!inp) return;
+  const mins = parseInt(inp.value);
+  if (!mins || mins < 1 || mins > 180) {
+    toast('Please enter 1-180 minutes!', 'err');
+    return;
+  }
+  timerState.customMinutes = mins;
+  const secs = mins * 60;
+  timerState.selectedDuration = secs;
+  timerState.duration = secs;
+  timerState.total = secs;
+  timerState.remaining = secs;
+  timerState.growth = 0;
+  timerState.completed = false;
+  timerState.showingCustom = false;
+  timerState.customActive = true;
+  renderFocus();
+  toast(`⏱️ ${mins} min custom session!`, 'ok');
 }
 
 function tickTimer() {
@@ -1345,6 +1392,7 @@ function resetTimer() {
   timerState.duration = timerState.selectedDuration;
   timerState.total = timerState.selectedDuration;
   timerState.growth = 0;
+  timerState.showingCustom = false;
   renderFocus();
 }
 
